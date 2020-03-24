@@ -1,3 +1,6 @@
+
+# This is forked from [Ruby on Rails sample app](https://github.com/codefresh-contrib/ruby-on-rails-sample-app).
+
 # Codefresh example of Ruby on Rails
 
 Original version is at 	https://bitbucket.org/railstutorial/sample_app_4th_ed.git
