@@ -1,0 +1,16 @@
+<h1>App 1</h1>
+<p>
+  <div class="row">
+  <div class="column">
+	<li>data layout</li>
+    <p> Received message = <%= @message %> </p>
+  	<%= link_to image_tag("visualization.png",size: "320x200", alt: "data layout"),
+              webpage_path(:id=>1) %>
+  </div>
+  <div class="column">
+	<li>query plan</li>
+  	<%= link_to image_tag("plan.png",size: "180x80", alt: "query plan"),
+              webpage_path(:id=>2) %>
+  </div>
+  </div>
+</p>

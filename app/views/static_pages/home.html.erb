@@ -18,15 +18,23 @@
   </div>
 <% else %>
   <div class="center jumbotron">
-    <h1>Welcome to the Sample App</h1>
+    <h1>Welcome to the Chestnut Demo</h1>
 
     <h2>
-      This is the home page for the
-      <a href="http://www.railstutorial.org/">Ruby on Rails Tutorial</a>
-      sample application.
+      This is the demo for the
+      <a href="http://homes.cs.washington.edu/~congy/chestnut.pdf">Chestnut</a>
+      project.
     </h2>
 
-    <%= link_to "Sign up now!", signup_path, class: "btn btn-lg btn-primary" %>
+	<br>
+	<br>
+	<h2>
+		Choose one of the application to start with:
+	</h2>
+	<br>
+	<% @apps.each do |app| %>
+    	<%= link_to app.name, customapp_show_path(:id=>app.id), class: "btn btn-lg btn-primary" %>
+	<% end %>
   </div>
 
   <%= link_to image_tag("rails.png", alt: "Rails logo"),

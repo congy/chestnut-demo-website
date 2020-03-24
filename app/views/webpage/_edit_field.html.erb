@@ -1,0 +1,9 @@
+
+<fieldset>
+  <b>Choose page weight:</b><br />
+  <%= f.radio_button :weight, '0' %> 0 <br />
+  <%= f.radio_button :weight, '1' %> 1 <br />
+  <%= f.radio_button :weight, '10' %> 10 <br />
+  <b>Or manually input a page weight:</b>
+  <%= f.text_field :custom_weight, size: 10 %> <br />
+</fieldset>
