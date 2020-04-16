@@ -1,0 +1,4 @@
+[submodule "chestnut/repo"]
+	path = chestnut/repo
+	url = git@github.com:congy/chestnut.git
+	branch = partition-python3
