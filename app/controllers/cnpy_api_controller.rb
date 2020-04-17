@@ -6,9 +6,15 @@ class CnpyApiController < ApplicationController
   def run
     # TODO parse input, model of application and webpages.
     # TODO caching.
+    
+    # Argument parsing.
+    args = []
+    unless params[:single_query].nil?
+      args.push('--single_query', params[:single_query])
+    end
 
     # Run chestnut python script
-    poutput, pinfo = Open3.capture2('python3', 'chestnut/run.py') # args...
+    poutput, pinfo = Open3.capture2('python3', 'chestnut/run.py', *args) # ...
     status = 0 == pinfo.exitstatus ? 200 : 500
 
     # https://stackoverflow.com/a/12385656/2398020
