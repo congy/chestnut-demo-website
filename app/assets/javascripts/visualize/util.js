@@ -25,7 +25,7 @@ function getRowSubsetByCondition({ header, rows }, conditionString=null) {
   let i = header.indexOf(lname);
 
   if (i < 0)
-    throw Error(`Unknown col: "${lname}".`);
+    throw Error(`Unknown col: "${lname}" from condition string: "${conditionString}".`);
 
   if (rname.indexOf('param') === 0) // TODO hack.
     return rows;

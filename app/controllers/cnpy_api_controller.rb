@@ -8,7 +8,7 @@ class CnpyApiController < ApplicationController
     # TODO caching.
     
     # Argument parsing.
-    args = []
+    args = [ '--scale', '0' ]
     unless params[:single_query].nil?
       args.push('--single_query', params[:single_query])
     end
@@ -20,6 +20,29 @@ class CnpyApiController < ApplicationController
     # https://stackoverflow.com/a/12385656/2398020
     respond_to do |format|
       format.json { render :json => poutput, :status => status }
+    end
+  end
+  def get_tsv
+    # TODO: hack since files are not thread safe.
+    path = './chestnut/repo/benchmark/kandan/data/kandan_lg/*.tsv'
+    data = Dir.glob(path).map do |file_path|
+      name = file_path[file_path.rindex('/') + 1 .. -5]
+      puts(file_path.rindex('/') + 1, file_path)
+
+      rows = File.open(file_path).map { |line| line.strip.split('|') }
+      head = rows.shift()
+      [
+        name, 
+        {
+          :header => head,
+          :rows => rows,
+        }
+      ]
+    end
+    data = data.to_h
+
+    respond_to do |format|
+      format.json { render :json => data, :status => 200 }
     end
   end
 end

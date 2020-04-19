@@ -1,4 +1,4 @@
-const JSON_MODEL = {
+let JSON_MODEL = {
     0: {
         'table': ['tracker'],
         'type': 'BasicArray',
@@ -68,6 +68,224 @@ const JSON_MODEL = {
             }]
         }
     }
+};
+JSON_MODEL = {
+  "0": {
+    "type": "BasicArray",
+    "value": {
+      "fields": [
+        "id",
+        "created_at",
+        "updated_at",
+        "action",
+        "content",
+        "channel_id",
+        "user_id"
+      ],
+      "nested": [
+        {
+          "type": "BasicArray",
+          "value": {
+            "fields": [
+              "id",
+              "username"
+            ],
+            "nested": []
+          },
+          "table": [
+            "activity",
+            "user"
+          ],
+          "association": {
+            "assocType": "one_to_many",
+            "leftTable": "user",
+            "rightTable": "activity",
+            "leftFkField": "activities_id",
+            "rightFkField": "user_id"
+          }
+        }
+      ]
+    },
+    "table": [
+      "activity"
+    ]
+  },
+  "1": {
+    "type": "Index",
+    "id": 10,
+    "table": [
+      "activity"
+    ],
+    "keys": [
+      {
+        "key": "channel.id",
+        "path": []
+      },
+      {
+        "key": "id",
+        "path": []
+      }
+    ],
+    "condition": "(channel.id == param[channel_id]) && ((id >= 1) && (id <= 20))",
+    "value": {
+      "type": "ptr",
+      "target": 5
+    }
+  },
+  "2": {
+    "type": "Index",
+    "id": 17,
+    "table": [
+      "activity"
+    ],
+    "keys": [
+      {
+        "key": "channel.id",
+        "path": []
+      },
+      {
+        "key": "id",
+        "path": []
+      }
+    ],
+    "condition": "(channel.id == param[channel_id]) && (id <= param[oldest])",
+    "value": {
+      "type": "ptr",
+      "target": 5
+    }
+  },
+  "3": {
+    "type": "BasicArray",
+    "value": {
+      "fields": [
+        "id",
+        "name",
+        "created_at",
+        "updated_at",
+        "user_id"
+      ],
+      "nested": [
+        {
+          "type": "BasicArray",
+          "value": {
+            "fields": [
+              "id",
+              "content",
+              "action",
+              "created_at",
+              "updated_at"
+            ],
+            "nested": [
+              {
+                "type": "BasicArray",
+                "value": {
+                  "fields": [
+                    "id",
+                    "username"
+                  ],
+                  "nested": []
+                },
+                "table": [
+                  "activities",
+                  "user"
+                ],
+                "association": {
+                  "assocType": "one_to_many",
+                  "leftTable": "user",
+                  "rightTable": "activity",
+                  "leftFkField": "activities_id",
+                  "rightFkField": "user_id"
+                }
+              }
+            ]
+          },
+          "table": [
+            "channel",
+            "activities"
+          ],
+          "association": {
+            "assocType": "one_to_many",
+            "leftTable": "channel",
+            "rightTable": "activity",
+            "leftFkField": "activities_id",
+            "rightFkField": "channel_id"
+          }
+        }
+      ]
+    },
+    "table": [
+      "channel"
+    ]
+  },
+  "4": {
+    "type": "Index",
+    "id": 25,
+    "table": [
+      "activity"
+    ],
+    "keys": [
+      {
+        "key": "id",
+        "path": []
+      }
+    ],
+    "condition": "id == param[id]",
+    "value": {
+      "type": "ptr",
+      "target": 5
+    }
+  },
+  "5": {
+    "type": "Index",
+    "id": 31,
+    "table": [
+      "attachment"
+    ],
+    "keys": [
+      {
+        "key": "channel.id",
+        "path": []
+      },
+      {
+        "key": "created_at",
+        "path": []
+      }
+    ],
+    "condition": "(channel.id == param[channel_id]) && ((created_at >= 0) && (created_at <= 4294967295))",
+    "value": {
+      "fields": [
+        "id",
+        "file_file_name",
+        "file_content_type",
+        "file_file_size",
+        "message_id",
+        "file_updated_at",
+        "created_at",
+        "updated_at",
+        "user_id",
+        "channel_id"
+      ],
+      "nested": []
+    }
+  },
+  "6": {
+    "type": "Index",
+    "id": 45,
+    "table": [
+      "channel"
+    ],
+    "keys": [
+      {
+        "key": "id",
+        "path": []
+      }
+    ],
+    "condition": "id == param[channel_id]",
+    "value": {
+      "type": "ptr",
+      "target": 22
+    }
+  }
 };
 
 // result_activity: Activity

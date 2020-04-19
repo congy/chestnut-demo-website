@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   delete '/logout',  to: 'sessions#destroy'
 
   post   '/api/cnpy', to: 'cnpy_api#run'
+  get    '/api/tsv', to: 'cnpy_api#get_tsv'
 
   resources :customapp
   resources :users do

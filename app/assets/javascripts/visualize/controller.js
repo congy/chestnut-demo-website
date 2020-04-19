@@ -3,10 +3,9 @@ class VisualizerController {
         this.svg = svg;
     }
     async load() { // TODO: only loads TSV file.
-        // const res = await fetch('/api/cnpy', { method: 'POST' });
-        // const json = await res.json();
-        // console.log(json);
-        // this.data = json.ds; // TOOD also get query plans `qp`.
+        const res = await fetch('/api/tsv');
+        const json = await res.json();
+        this.data = json;
     }
     draw() {
         const svg = this.svg;
