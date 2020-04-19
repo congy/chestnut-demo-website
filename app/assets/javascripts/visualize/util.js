@@ -25,7 +25,8 @@ function getRowSubsetByCondition({ header, rows }, conditionString=null) {
   let i = header.indexOf(lname);
 
   if (i < 0)
-    throw Error(`Unknown col: "${lname}" from condition string: "${conditionString}".`);
+    return rows; // TODO REMOVE ME (HACK)
+    // throw Error(`Unknown col: "${lname}" from condition string: "${conditionString}".`);
 
   if (rname.indexOf('param') === 0) // TODO hack.
     return rows;
@@ -86,9 +87,10 @@ function determineTableName(data, model, parentTableName = null) {
 }
 
 function getNestedRows(data, model, header, row, nestedModel) {
-  let tableName = getTableFromPath(model.table);
-  if (!data[tableName]) tableName = tableName.slice(0, -1);
-  if (!data[tableName]) throw Error(`failed to find table: ${tableName}`);
+  let tableName = getTableFromPath(model.table);                  // Activities
+  if (!data[tableName]) tableName = tableName.slice(0, -1);       // Activitie
+  if (!data[tableName]) tableName = tableName.slice(0, -2) + 'y'; // Activity
+  if (!data[tableName]) throw Error(`Failed to find table: "${tableName}" from tables ${Object.keys(data)}.`);
   const nestedName = getTableFromPath(nestedModel.table);
 
   // const keyManyToOne = nestedName + '_id';
