@@ -18,6 +18,7 @@ Rails.application.routes.draw do
   get    '/signup',  to: 'users#new'
   get    '/webpage', to: 'webpage#show'
   get    '/showlayout', to: 'datalayout#show'
+  get    '/showlayout2', to: 'datalayout#show2'
   get    '/evaluate', to: 'evaluate#show'
   get    '/login',   to: 'sessions#new'
   post   '/login',   to: 'sessions#create'

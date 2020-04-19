@@ -14,4 +14,7 @@ class DatalayoutController < ApplicationController
 	@message = data
 	@rep_sock.close()
   end
+
+  def show2
+  end
 end

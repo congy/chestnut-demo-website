@@ -1,0 +1,31 @@
+<% content_for :javascript_includes do %>
+  <%= javascript_include_tag 'visualize', 'data-turbolinks-track': 'reload' %>
+<% end %>
+<h1>App 1</h1>
+<p>
+  <div class="row">
+  <div class="column">
+    <p>
+      Hello. Lorem Ipsum.
+    </p>
+  </div>
+  <div class="column">
+    <svg viewBox="0 0 1060 610" style="width: 1000px;"></svg>
+  </div>
+</p>
+<script type="text/javascript">
+  const xmlns = "http://www.w3.org/2000/svg";
+  async function init() {
+    window.svg = document.getElementsByTagName('svg')[0];
+    window.ctrl = new VisualizerController(svg);
+    await ctrl.load();
+    ctrl.draw();
+    await ctrl.play();
+  }
+  function replay() {
+    ctrl.draw();
+    let _ignored = ctrl.play(); // Returns promise.
+    return false;
+  }
+  init();
+</script>
