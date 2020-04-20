@@ -12,7 +12,7 @@
   <svg viewBox="0 0 1060 1000" style="width: 1000px;"></svg>
 </div>
 <div class="column">
-  <p id="plan" style="white-space: pre-wrap; font-family: Consolas, monospace;"></p>
+  <p id="plan" style="white-space: pre-wrap; font-family: Consolas, monospace; font-size: 0.8em; line-height: 100%;"></p>
 </div>
 <script type="text/javascript">
   const xmlns = "http://www.w3.org/2000/svg";
@@ -30,7 +30,7 @@
     ctrl.draw();
     const { ds, qp } = await model_p;
     console.log(qp);
-    document.getElementById('plan').innerText = JSON.stringify(qp, null, 2);
+    document.getElementById('plan').innerText = JSON.stringify({ ds, qp }, null, 2);
     await ctrl.play(ds);
   }
   function replay() {
