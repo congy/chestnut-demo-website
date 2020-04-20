@@ -50,8 +50,8 @@ class VisualizerController {
         const root = new VisStack([ tocDiskVis, chestnutBox ], true, 20);
         root.attach(svg, 0, 0);
     }
-    async play() {
-        const chestnutModel = new ChestnutModel(JSON_MODEL, this.data);
+    async play(model) {
+        const chestnutModel = new ChestnutModel(model, this.data);
         chestnutModel.bind(this.svg, this.allTableVis);
         await chestnutModel.form(this.svg, this.chestnutVis, () => delay(75));
     }

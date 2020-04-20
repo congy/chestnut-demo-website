@@ -27,7 +27,6 @@ class CnpyApiController < ApplicationController
     path = './chestnut/repo/benchmark/kandan/data/kandan_lg/*.tsv'
     data = Dir.glob(path).map do |file_path|
       name = file_path[file_path.rindex('/') + 1 .. -5]
-      puts(file_path.rindex('/') + 1, file_path)
 
       rows = File.open(file_path).map { |line| line.strip.split('|') }
       head = rows.shift()

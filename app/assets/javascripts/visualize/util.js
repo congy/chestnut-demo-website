@@ -9,6 +9,7 @@ const OP_FNS = {
   '>=': (l, r) => l >= r,
   '>':  (l, r) => l >  r,
 };
+// TODO FULL EXPRESSION PARSING AND RPN
 function getRowSubsetByCondition({ header, rows }, conditionString=null) {
   if (!rows.every(row => Array.isArray(row)))
     throw Error(`rows must be array of arrays.`);
