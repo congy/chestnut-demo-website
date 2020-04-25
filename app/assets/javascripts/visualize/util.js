@@ -8,59 +8,58 @@ const OP_FNS = {
   '==': (l, r) => l == r,
   '>=': (l, r) => l >= r,
   '>':  (l, r) => l >  r,
+  '&&': (l, r) => l && r,
+  '||': (l, r) => l || r,
 };
 // TODO FULL EXPRESSION PARSING AND RPN
-function getRowSubsetByCondition({ header, rows }, conditionString=null) {
+function getRowSubsetByCondition({ header, rows }, cond = null) {
   if (!rows.every(row => Array.isArray(row)))
     throw Error(`rows must be array of arrays.`);
 
-
-  if (!conditionString)
+  if (!cond)
     return rows;
 
-  let [ lname, op, rname ] = parseCondition(conditionString);
+  return rows.filter(row => evalCond(cond, header, row));
+}
 
-  console.log(lname, op, rname);
-
-  // Index of column we care about.
-  let i = header.indexOf(lname);
-
-  if (i < 0)
-    return rows; // TODO REMOVE ME (HACK)
-    // throw Error(`Unknown col: "${lname}" from condition string: "${conditionString}".`);
-
-  if (rname.indexOf('param') === 0) // TODO hack.
-    return rows;
-
-
-  //throw Error(`Don't know how to handle: "${rname}".`);
-
-  let opFn = OP_FNS[op];
-  if (!opFn)
-    throw Error(`Unknown op: "${op}".`);
-
-  if (rname.startsWith("'") || rname.startsWith('"')) {
-    const rval = eval(rname); // EVAL.
-    console.log(rval, rows);
-    return rows.filter(row => opFn(row[i], rval));
+function evalCond(cond, header, row) {
+  switch (cond.expr) {
+    case 'BinOp':
+      const fn = OP_FNS[cond.op];
+      if (!fn)
+        throw Error(`Failed to find function for OP: '${cond.op}'.`);
+      if ('Parameter' == cond.lh.expr || 'Parameter' == cond.rh.expr)
+        // Hack for input parameters.
+        return true;
+      const lh = evalCond(cond.lh, header, row);
+      const rh = evalCond(cond.rh, header, row); // No short-circuit.
+      return fn(lh, rh);
+    case 'AssocOp':
+      console.error(cond, header, row);
+      throw 'TODO';
+    case 'AtomValue':
+      if ("'" == cond.value[0])
+        return cond.value.slice(1, -1);
+      const num = Number(cond.value);
+      if (Number.isNaN(num))
+        throw Error(`Failed to parse AtomValue: [${cond.value}].`);
+      return num;
+    case 'QueryField':
+      const i = header.indexOf(cond.field)
+      return row[i];
+    case 'Parameter':
+    default:
+      console.error(cond, header, row);
+      throw 'SHOULD NOT REACH';
   }
-
-  // Just return the rows matching the condition...
-  // Choose the middle value as the right hand side. (TODO?).
-  let values = rows.map(row => row[i]);
-  values.sort(); // LEXICOGRAPHICAL ORDERING OF NUBMERS (TODO?).
-
-  let rhs = values[values.length / 2];
-
-  return rows.filter(row => opFn(row[i], rhs));
 }
 
-function parseCondition(conditionString) {
-  const match = /(\S+)\s+(<|<=|==|>=|>)\s+(\S+)/g.exec(conditionString);
-  if (!match)
-    throw new Error(`Failed to match conditionString: "${conditionString}".`);
-  return match.slice(1);
-}
+// function parseCondition(conditionString) {
+//   const match = /(\S+)\s+(<|<=|==|>=|>)\s+(\S+)/g.exec(conditionString);
+//   if (!match)
+//     throw new Error(`Failed to match conditionString: "${conditionString}".`);
+//   return match.slice(1);
+// }
 
 function getRowById(header, rows, id) {
   const i = header.indexOf('id');

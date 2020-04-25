@@ -42,6 +42,7 @@ class DS {
         this.color = getColorFromTable(this.table);
 
         this.condition = model.condition;
+        this.conditionStr = model.condition_str;
 
         let { header, rows: allRows } = data[this.table];
         this.rows = getRowSubsetByCondition({ header, rows }, model.condition);

@@ -22,6 +22,12 @@ function qpToSteps(step, output = [], depth = 0, loopVar = null) {
       qpToSteps(step.value.steps, output = output, depth = depth + 1, loopVar = loopVar);
       break;
     case "ExecSetVarStep":
+      if (step.value.cond) {
+        output.push([
+          depth, `if ${step.value.cond}:`
+        ]);
+        depth++;
+      }
       output.push([
         depth, step.value.var.atom
           ? `${step.value.var.name} = ${step.value.expr || loopVar}`
