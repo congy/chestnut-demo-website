@@ -1,6 +1,17 @@
 <% content_for :javascript_includes do %>
   <%= javascript_include_tag 'visualize', 'data-turbolinks-track': 'reload' %>
   <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+  <style>
+    svg * {
+      transition: transform 0.8s cubic-bezier(0.47, 0, 0.745, 0.715);
+    }
+    svg rect {
+      transition:
+        transform 0.8s cubic-bezier(0.47, 0, 0.745, 0.715),
+        width 0.8s cubic-bezier(0.47, 0, 0.745, 0.715),
+        height 0.8s cubic-bezier(0.47, 0, 0.745, 0.715);
+    }
+  </style>
 <% end %>
 <h1>App 1</h1>
 <div class="row">

@@ -73,7 +73,7 @@ class VisElem extends Vis {
 }
 
 class VisBox extends Vis {
-    constructor(item, color = 'white', pad = 0) {
+    constructor(item, color = 'white', pad = 0, dotted = false) {
         super();
 
         this.item = item;
@@ -82,6 +82,8 @@ class VisBox extends Vis {
         this.color = color;
         this.rect = createRectEl();
         this.rect.setAttribute('fill', color);
+        if (dotted)
+            this.rect.setAttribute('stroke-dasharray', '6 4');
 
         this.pad = pad;
         this.width = 0;
@@ -145,7 +147,7 @@ const vrPad = 5;
 const vrSpacing = 5;
 class VisRecord extends Vis {
 
-    constructor(label, color = 'rgba(255, 0, 0, 0.1)', data = null) {
+    constructor(label, color = 'rgba(255, 0, 0, 0.1)', data = null, boxDotted = false) {
         super();
         this.label = label;
         this.data = data;
@@ -158,7 +160,7 @@ class VisRecord extends Vis {
         // this.stack.setParent(this);
 
         this.color = color;
-        this.box = new VisBox(this.stack, color, vrPad);
+        this.box = new VisBox(this.stack, color, vrPad, boxDotted);
         this.box.setParent(this);
 
         this.width = 0;
@@ -205,8 +207,9 @@ class VisRecord extends Vis {
         this.width = width;
         this.height = height;
     }
-    clone(svg) {
-        const copy = new VisRecord(this.label, this.color, JSON.parse(JSON.stringify(this.data)));
+    clone(svg, boxDotted = false) {
+        // Note: boxDotted not cloned.
+        const copy = new VisRecord(this.label, this.color, JSON.parse(JSON.stringify(this.data)), boxDotted);
         copy.attach(svg, this.x, this.y);
         return copy;
     }

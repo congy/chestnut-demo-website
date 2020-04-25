@@ -46,10 +46,12 @@ class DS {
 
         let { header, rows: allRows } = data[this.table];
         this.rows = getRowSubsetByCondition({ header, rows }, model.condition);
+        if ('Index' === model.type)
+            sortIndexRows({ header, rows: this.rows }, model.keys);
 
         console.log(`${this.type}[${this.path}]: ${this.rows.length}/${data[this.table].rows.length} rows.`);
 
-        this.records = this.rows.map(row => new Record(model, data, row, parentTableName));
+        this.records = this.rows.map(row => new Record(model, data, row, parentTableName, this.type));
     }
     bind(svg, allTableVis) {
         this.records.map(record => record.bind(svg, allTableVis));
@@ -78,9 +80,10 @@ class IndexDS extends DS {
 
 
 class Record {
-    constructor(model, data, row, parentTableName = null) {
+    constructor(model, data, row, parentTableName = null, parentDsType = 'BasicArray') {
         this.row = row;
         this.path = model.table;
+        this.parentDsType = parentDsType;
 
         this.table = determineTableName(data, model, parentTableName);
 
@@ -101,7 +104,8 @@ class Record {
         const recordVisToClone = tableVis.get(this.recordId - 1);
         if (!recordVisToClone) return; // SHIELD against invalid FK constraint.
 
-        this._recordVis = recordVisToClone.clone(svg);
+        const boxDotted = 'Index' === this.parentDsType;
+        this._recordVis = recordVisToClone.clone(svg, boxDotted);
 
         this.nested.forEach(nest => nest.bind(svg, allTableVis));
     }

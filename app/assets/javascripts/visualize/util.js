@@ -3,15 +3,15 @@ function getTableFromPath(path) {
   return path[path.length - 1];
 }
 const OP_FNS = {
-  '<':  (l, r) => l <  r,
-  '<=': (l, r) => l <= r,
-  '==': (l, r) => l == r,
-  '>=': (l, r) => l >= r,
-  '>':  (l, r) => l >  r,
-  '&&': (l, r) => l && r,
-  '||': (l, r) => l || r,
+  '<':  (l, r) => l <   r,
+  '<=': (l, r) => l <=  r,
+  '==': (l, r) => l === r,
+  '>=': (l, r) => l >=  r,
+  '>':  (l, r) => l >   r,
+  '&&': (l, r) => l &&  r,
+  '||': (l, r) => l ||  r,
 };
-// TODO FULL EXPRESSION PARSING AND RPN
+
 function getRowSubsetByCondition({ header, rows }, cond = null) {
   if (!rows.every(row => Array.isArray(row)))
     throw Error(`rows must be array of arrays.`);
@@ -22,23 +22,58 @@ function getRowSubsetByCondition({ header, rows }, cond = null) {
   return rows.filter(row => evalCond(cond, header, row));
 }
 
+// Sorts in-place.
+function sortIndexRows({ header, rows }, keys) {
+  function cmp(rowA, rowB) {
+    for (const { key } of keys) {
+      const valA = evalCond(key, header, rowA);
+      const valB = evalCond(key, header, rowB);
+      if (valA > valB) return +1;
+      if (valA < valB) return -1;
+    }
+    return 0;
+  }
+  rows.sort(cmp);
+}
+
+// Really evals expressions in general, not just conds.
 function evalCond(cond, header, row) {
   switch (cond.expr) {
     case 'BinOp':
       const fn = OP_FNS[cond.op];
       if (!fn)
         throw Error(`Failed to find function for OP: '${cond.op}'.`);
-      if ('Parameter' == cond.lh.expr || 'Parameter' == cond.rh.expr)
-        // Hack for input parameters.
+
+      // Handle input parameters.
+      if ('Parameter' === cond.lh.expr || 'Parameter' === cond.rh.expr)
         return true;
+      // if ('Parameter' === cond.lh.expr) {
+      //   if ('QueryField' !== cond.rh.expr) throw Error(`Bad BinOp on LH query param, RH ${cond.rh.expr}.`);
+      //   collectedParams.push(cond.rh.field);
+      //   return true;
+      // }
+      // if ('Parameter' === cond.rh.expr) {
+      //   if ('QueryField' !== cond.lh.expr) throw Error(`Bad BinOp on RH query param, LH ${cond.lh.expr}.`);
+      //   collectedParamss.push(cond.lh.field);
+      //   return true;
+      // }
+
       const lh = evalCond(cond.lh, header, row);
-      const rh = evalCond(cond.rh, header, row); // No short-circuit.
+      const rh = evalCond(cond.rh, header, row); // No short-circuit allowed.
       return fn(lh, rh);
     case 'AssocOp':
+      // Handle FK id case.
+      if ('QueryField' === cond.rh.expr && 'id' === cond.rh.field) {
+        if ('QueryField' !== cond.lh.expr) throw Error(`Unexpected AssocOp LH: ${cond.lh.expr}.`);
+        const fkField = cond.lh.field + '_id';
+        const i = header.indexOf(fkField);
+        return row[i];
+      }
+      // Otherwise crash.
       console.error(cond, header, row);
       throw 'TODO';
     case 'AtomValue':
-      if ("'" == cond.value[0])
+      if ("'" === cond.value[0])
         return cond.value.slice(1, -1);
       const num = Number(cond.value);
       if (Number.isNaN(num))
