@@ -19,15 +19,15 @@ function getRowSubsetByCondition({ header, rows }, cond = null) {
   if (!cond)
     return rows;
 
-  return rows.filter(row => evalCond(cond, header, row));
+  return rows.filter(row => evalExpr(cond, header, row));
 }
 
 // Sorts in-place.
 function sortIndexRows({ header, rows }, keys) {
   function cmp(rowA, rowB) {
     for (const { key } of keys) {
-      const valA = evalCond(key, header, rowA);
-      const valB = evalCond(key, header, rowB);
+      const valA = evalExpr(key, header, rowA);
+      const valB = evalExpr(key, header, rowB);
       if (valA > valB) return +1;
       if (valA < valB) return -1;
     }
@@ -37,41 +37,31 @@ function sortIndexRows({ header, rows }, keys) {
 }
 
 const REGEX_DATE = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
-// Really evals expressions in general, not just conds.
-function evalCond(cond, header, row) {
-  switch (cond.expr) {
+// Evaluate a expression from chestnut, represented in a JSON tree.
+function evalExpr(e, header, row) {
+  switch (e.expr) {
     case 'BinOp':
-      const fn = OP_FNS[cond.op];
+      const fn = OP_FNS[e.op];
       if (!fn)
-        throw Error(`Failed to find function for OP: '${cond.op}'.`);
+        throw Error(`Failed to find function for OP: '${e.op}'.`);
 
       // Handle input parameters.
-      if ('Parameter' === cond.lh.expr || 'Parameter' === cond.rh.expr)
+      if ('Parameter' === e.lh.expr || 'Parameter' === e.rh.expr)
         return true;
-      // if ('Parameter' === cond.lh.expr) {
-      //   if ('QueryField' !== cond.rh.expr) throw Error(`Bad BinOp on LH query param, RH ${cond.rh.expr}.`);
-      //   collectedParams.push(cond.rh.field);
-      //   return true;
-      // }
-      // if ('Parameter' === cond.rh.expr) {
-      //   if ('QueryField' !== cond.lh.expr) throw Error(`Bad BinOp on RH query param, LH ${cond.lh.expr}.`);
-      //   collectedParamss.push(cond.lh.field);
-      //   return true;
-      // }
 
-      let lh = evalCond(cond.lh, header, row);
-      let rh = evalCond(cond.rh, header, row); // No short-circuit allowed.
+      let lh = evalExpr(e.lh, header, row);
+      let rh = evalExpr(e.rh, header, row); // No short-circuit handling.
 
       // Handle mismatched types.
       fixtypes:
       if (typeof lh !== typeof rh) {
         if ('string' === typeof lh && 'number' === typeof rh) {
-          if (REGEX_DATE.test(lh)) {
-            lh = new Date(lh).getTime() / 1000;
-            break fixtypes;
-          }
           if (Number.isFinite(Number(lh))) {
             lh = Number(lh);
+            break fixtypes;
+          }
+          if (REGEX_DATE.test(lh)) {
+            lh = new Date(lh).getTime() / 1000;
             break fixtypes;
           }
         }
@@ -83,38 +73,31 @@ function evalCond(cond, header, row) {
       return fn(lh, rh);
     case 'AssocOp':
       // Handle FK id case.
-      if ('QueryField' === cond.rh.expr && 'id' === cond.rh.field) {
-        if ('QueryField' !== cond.lh.expr) throw Error(`Unexpected AssocOp LH: ${cond.lh.expr}.`);
-        const fkField = cond.lh.field + '_id';
+      if ('QueryField' === e.rh.expr && 'id' === e.rh.field) {
+        if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
+        const fkField = e.lh.field + '_id';
         const i = header.indexOf(fkField);
         return row[i];
       }
       // Otherwise crash.
-      console.error(cond, header, row);
+      console.error(e, header, row);
       throw 'TODO';
     case 'AtomValue':
-      if ("'" === cond.value[0])
-        return cond.value.slice(1, -1);
-      const num = Number(cond.value);
+      if ("'" === e.value[0])
+        return e.value.slice(1, -1);
+      const num = Number(e.value);
       if (!Number.isFinite(num))
-        throw Error(`Failed to parse AtomValue: [${cond.value}].`);
+        throw Error(`Failed to parse AtomValue: [${e.value}].`);
       return num;
     case 'QueryField':
-      const i = header.indexOf(cond.field)
+      const i = header.indexOf(e.field)
       return row[i];
     case 'Parameter':
     default:
-      console.error(cond, header, row);
+      console.error(e, header, row);
       throw 'SHOULD NOT REACH';
   }
 }
-
-// function parseCondition(conditionString) {
-//   const match = /(\S+)\s+(<|<=|==|>=|>)\s+(\S+)/g.exec(conditionString);
-//   if (!match)
-//     throw new Error(`Failed to match conditionString: "${conditionString}".`);
-//   return match.slice(1);
-// }
 
 function getRowById(header, rows, id) {
   const i = header.indexOf('id');
