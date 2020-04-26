@@ -36,6 +36,7 @@ function sortIndexRows({ header, rows }, keys) {
   rows.sort(cmp);
 }
 
+const REGEX_DATE = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
 // Really evals expressions in general, not just conds.
 function evalCond(cond, header, row) {
   switch (cond.expr) {
@@ -58,8 +59,27 @@ function evalCond(cond, header, row) {
       //   return true;
       // }
 
-      const lh = evalCond(cond.lh, header, row);
-      const rh = evalCond(cond.rh, header, row); // No short-circuit allowed.
+      let lh = evalCond(cond.lh, header, row);
+      let rh = evalCond(cond.rh, header, row); // No short-circuit allowed.
+
+      // Handle mismatched types.
+      fixtypes:
+      if (typeof lh !== typeof rh) {
+        if ('string' === typeof lh && 'number' === typeof rh) {
+          if (REGEX_DATE.test(lh)) {
+            lh = new Date(lh).getTime() / 1000;
+            break fixtypes;
+          }
+          if (Number.isFinite(Number(lh))) {
+            lh = Number(lh);
+            break fixtypes;
+          }
+        }
+        else {
+          console.error(`Unknown BinOp LH/RH types: LH: ${lh}, ${typeof lh}; RH ${rh} ${typeof rh}.`);
+        }
+      }
+
       return fn(lh, rh);
     case 'AssocOp':
       // Handle FK id case.
@@ -76,7 +96,7 @@ function evalCond(cond, header, row) {
       if ("'" === cond.value[0])
         return cond.value.slice(1, -1);
       const num = Number(cond.value);
-      if (Number.isNaN(num))
+      if (!Number.isFinite(num))
         throw Error(`Failed to parse AtomValue: [${cond.value}].`);
       return num;
     case 'QueryField':
