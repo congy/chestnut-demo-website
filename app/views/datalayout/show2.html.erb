@@ -55,13 +55,19 @@
   }
   function writeQueryPlans({ ds, qp }) {
     const plansEl = document.getElementById('plans');
-    for (const [ qid, rootStep ] of Object.entries(qp)) {
+    for (const qp_info of qp) {
       const h1 = document.createElement('h1')
-      h1.innerText = `Query ${qid}`;
+      h1.innerText = `Query ${qp_info.qid}, Plan ${qp_info.pid}`;
       plans.appendChild(h1);
-      const pre = document.createElement('pre')
+
+      let pre = document.createElement('pre');
       pre.className = 'prettyprint lang-py linenums';
-      pre.innerText = qpToString(rootStep);
+      pre.innerText = qpToString(qp_info);
+      plans.appendChild(pre);
+
+      pre = document.createElement('pre');
+      pre.className = 'prettyprint lang-json linenums';
+      pre.innerText = JSON.stringify(qp_info, null, 2);
       plans.appendChild(pre);
     }
     PR.prettyPrint();

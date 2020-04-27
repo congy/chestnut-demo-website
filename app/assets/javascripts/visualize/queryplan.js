@@ -45,8 +45,14 @@ function qpToSteps(step, output = [], depth = 0, loopVar = null) {
   return output;
 }
 
-function qpToString(step, indent = 4) {
-  return qpToSteps(step)
-    .map(([ depth, str ]) => ' '.repeat(depth * indent) + str)
-    .join('\n');
+function qpToString(qp_info, indent = 4) {
+  if (qp_info.inputs.some(inp => 'Parameter' !== inp.expr))
+    throw Error(`QP Input not of type parameter.`);
+  const inputs = qp_info.inputs.map(inp => `${inp.symbol}: ${inp.type}`);
+  const def = `def query_${qp_info.qid}(${inputs.join(', ')}) -> ${qp_info.output.type}:`;
+  const lines = [
+    def,
+    ...qpToSteps(qp_info.plan).map(([ depth, str ]) => ' '.repeat((1 + depth) * indent) + str),
+  ];
+  return lines.join('\n');
 }
