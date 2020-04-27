@@ -24,19 +24,19 @@ function qpToSteps(step, output = [], depth = 0, loopVar = null) {
     case "ExecSetVarStep":
       if (step.value.cond) {
         output.push([
-          depth, `if ${step.value.cond}:`
+          depth, `if ${step.value.cond_str}:`
         ]);
         depth++;
       }
       output.push([
         depth, step.value.var.atom
-          ? `${step.value.var.name} = ${step.value.expr || loopVar}`
-          : `${step.value.var.name}.append(${step.value.expr || loopVar})`
+          ? `${step.value.var.name} = ${step.value.var.init || loopVar}`
+          : `${step.value.var.name}.append(${step.value.var.init || loopVar})`
       ]);
       break;
     case "ExecSortStep":
       output.push([
-        depth, `sort(${step.value.var.name} by ${step.value.order.join(', ')})`
+        depth, `sort(${step.value.var.name} by ${step.value.order.map(o => o.field).join(', ')})`
       ]);
       break;
     default:
