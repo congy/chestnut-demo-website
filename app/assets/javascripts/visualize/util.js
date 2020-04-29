@@ -200,7 +200,11 @@ function getNestedRows(data, model, header, row, nestedModel) {
   // INDICES FROM HERE ON?
 
   // slice is HACK for trailing 's'.
-  const { header: nestedHeader, rows: nestedAllRows } = data[nestedName] || data[nestedName.slice(0, -1)];
+  let tableData = data[nestedName];
+  if (!tableData) tableData = data[nestedName.slice(0, -1)];
+  if (!tableData) tableData = data[nestedName.slice(0, -3) + 'y'];
+  if (!tableData) throw Error(`Unknown table: ${nestedName}.`);
+  const { header: nestedHeader, rows: nestedAllRows } = tableData;
 
   console.log('!TODO!', nestedModel.association);
   //return [];
