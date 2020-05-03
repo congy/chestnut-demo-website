@@ -55,9 +55,12 @@
   }
   function writeQueryPlans({ ds, qp }) {
     const plansEl = document.getElementById('plans');
-    for (const qpInfo of qp) {
+    let i = 0;
+    for (let i = 0; i < qp.length; i++) {
+      const qpInfo = qp[i];
+
       const h1 = document.createElement('h1')
-      h1.innerText = `Query ${qpInfo.qid}, Plan ${qpInfo.pid}`;
+      h1.innerText = `${i} Query ${qpInfo.qid}, Plan ${qpInfo.pid}`;
       plans.appendChild(h1);
 
       let pre = document.createElement('pre');

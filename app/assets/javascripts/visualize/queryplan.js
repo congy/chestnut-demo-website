@@ -4,7 +4,7 @@ class PlanContext {
     this.qpInfo = qpInfo;
     this.allDs = allDs;
 
-    this.localDs = localDs || new Map(Object.values(allDs).map(ds => [ ds.id, ds ]));
+    this.localDs = localDs || new Map(allDs.map(ds => [ ds.id, ds ]));
 
     this.parent = null;
 
@@ -19,8 +19,8 @@ class PlanContext {
     this.names = new Set();
   }
 
-  writeLine(...lines) {
-    this.output.push(...lines.map(l => [ this.depth, l ]));
+  writeLine(line, extraIndent = 0) {
+    this.output.push([ this.depth + extraIndent, line ]);
   }
 
   static _varKey(v) {
@@ -34,22 +34,23 @@ class PlanContext {
   // Get anonymous variable
   // Cannot be reused elsewhere unless it is the loopVar or outVar or something.
   makeAnonVar(pref = 'anon') {
-    for (let i = 0; this.names.has(pref); i++)
-      pref = `${pref}_${i}`;
+    let name = pref;
+    for (let i = 0; this.names.has(name); i++)
+      name = `${pref}_${i}`;
 
-    this.names.add(pref);
-    return pref;
+    this.names.add(name);
+    return name;
   }
 
   // Get var name helper.
   _getVar(key, pref) {
     // Already defined.
     if (this.vars.has(key))
-      return this.vars.get(key);
+      return [ this.vars.get(key), false ];
     // Not defined.
     const name = this.makeAnonVar(pref);
     this.vars.set(key, name);
-    return name;
+    return [ name, true ];
   }
 
   // Get var name for an "env" (normal) variable.
@@ -77,7 +78,7 @@ class PlanContext {
     if (!pref) {
       const ds = this.getDs(dsId);
       // .slice(-1) to get last, deepest nested table type.
-      pref = `${ds.type.toLowerCase()}_${ds.table.slice(-1)[0]}`;
+      pref = `${ds.type.toLowerCase()}_${ds.tableType}_${dsId}`;
     }
     return this._getVar(key, pref);
   }
@@ -124,7 +125,7 @@ class PlanContext {
         out.push(`${this.loopVar}.${e.field}`);
         break;
       case 'Parameter':
-        out.push(this.getParamVar(e));
+        out.push(this.getParamVar(e)[0]);
         break;
       default:
         console.error(e, header, row);
@@ -163,11 +164,11 @@ function qpToSteps(step, context) {
 
       const qpInfo = context.qpInfo;
       const out = qpInfo.output;
-      context.outVar = context.getEnvVar(out, 'result');
+      context.outVar = context.getEnvVar(out, 'result')[0];
 
       const inputs = [];
       for (const inp of qpInfo.inputs) {
-        const name = context.getParamVar(inp);
+        const name = context.getParamVar(inp)[0];
         inputs.push(`${name}: ${inp.type}`);
       }
       const outType = out.atom ? out.type : `List[${out.type}]`;
@@ -188,7 +189,6 @@ function qpToSteps(step, context) {
     case "ExecScanStep": {
       const thisDs = context.getDs(step.value.idx);
       if (!thisDs) throw Error(`Missing DS IDX ${step.value.idx}.`);
-      const thisDsElType = thisDs.table.slice(-1)[0];
 
       // Get nested datastructures.
       let targetDs = thisDs;
@@ -200,7 +200,7 @@ function qpToSteps(step, context) {
       const nestedDses = targetDs.value.nested;
 
       // Create subContext.
-      const loopVar = context.makeAnonVar(`${thisDsElType}`);
+      const loopVar = context.makeAnonVar(`${thisDs.tableType}`);
       const subContext = context.sub({ loopVar });
       // Assign nested.
       for (const nestedDs of nestedDses)
@@ -208,10 +208,21 @@ function qpToSteps(step, context) {
 
       // Get nested datastructures back for the for-loop.
       const nestedDsVars = nestedDses.map(nestedDs => subContext.getDsVar(nestedDs.id,
-        `${thisDsElType}_${nestedDs.table.slice(-1)[0]}`));
+        `${thisDs.tableType}_${nestedDs.tableType}`)[0]);
 
-      // Print the for-loop line.
-      context.writeLine(`for ${[ loopVar, ...nestedDsVars ].join(', ')} in ${context.getDsVar(step.value.idx)}:`);
+      // Print the line.
+      const loopVars = [ loopVar, ...nestedDsVars ].join(', ');
+      const dsVar = context.getDsVar(step.value.idx)[0];
+      const boundsToStr = x => x.map(p => context.exprToString(p)).join(', ');
+      if (step.value.exact)
+        context.writeLine(`with ${loopVars} = ${dsVar}.get((${boundsToStr(step.value.exact)}))`);
+      else if (step.value.lower) {
+        if (!step.value.upper) throw Error('ExecScanStep with lower bound missing upper bound.');
+        context.writeLine(`for ${loopVars} in ${dsVar}`);
+        context.writeLine(`.range((${boundsToStr(step.value.lower)}), (${boundsToStr(step.value.upper)})):`, 2);
+      }
+      else
+        context.writeLine(`for ${loopVars} in ${dsVar}:`);
 
       // Recurse.
       qpToSteps(step.value.steps, subContext);
@@ -227,29 +238,33 @@ function qpToSteps(step, context) {
         // Value is an "atom", meaning several things:
         // - It is a single value (not a collection).
         // - It is not a output result.
-        // - ??
-        // TODO?
-        const aVar = localContext.getEnvVar(step.value.var);
-        this.writeLine(`${aVar}: ${step.value.var.type} = ${step.value.expr.value}`);
+        const [ aVar, isNew ] = localContext.getEnvVar(step.value.var);
+        if ('count()' == step.value.expr) {
+          if (isNew) throw Error('ExecSetVarStep with expr count() cannot be new.');
+          localContext.writeLine(`${aVar} += 1`)
+        }
+        else if (isNew)
+          localContext.writeLine(`${aVar}: ${step.value.var.type} = ${step.value.expr.value}`);
+        else
+          localContext.writeLine(`${aVar} = ${step.value.expr.value}`);
       }
       else {
         // Value is NOT an "atom", it is a collection (EnvCollectionVariable).
         // - It may be a result?
         // - ??
-        // TODO: make this actually use brain.
-        // const locVar = step.value.var.type
         if (step.value.var.init) throw Error(`Collection variable had init value: ${step.value.var.init}.`);
 
         const newOutVar = localContext.makeAnonVar(`result_${step.value.var.type}`);
-        localContext.writeLine(
-          `${newOutVar}: ${step.value.var.type} = ${localContext.loopVar}.clone()`,
-          `${localContext.outVar}.add_${step.value.var.type}(${newOutVar})`);
+        localContext.writeLine(`${newOutVar}: ${step.value.var.type} = ${localContext.loopVar}.clone()`);
+        localContext.writeLine(`${localContext.outVar}.add_${step.value.var.type}(${newOutVar})`);
         localContext.outVar = newOutVar;
       }
       break;
     }
     case "ExecSortStep": {
-      context.writeLine(`sort(${step.value.var.name} by ${step.value.order.map(o => o.field).join(', ')})`);
+      const [ varToSort, isNew ] = context.getEnvVar(step.value.var);
+      //if (isNew) throw Error(`ExecSortStep cannot sort new variable: "${varToSort}".`);
+      context.writeLine(`sort(${varToSort} by ${step.value.order.map(o => o.field).join(', ')})`);
       break;
     }
     default: {

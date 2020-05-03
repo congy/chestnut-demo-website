@@ -1,9 +1,8 @@
 class ChestnutModel {
     constructor(model, data) {
         // Top level data structures.
-        this.tlds = Object.values(model).map(x => {
-            const table = getTableFromPath(x.table);
-            const { header, rows } = data[table];
+        this.tlds = model.map(x => {
+            const { _header, rows } = data[x.tableType];
             return getDS(x, data, rows);
         });
     }
@@ -37,7 +36,7 @@ class DS {
         this.path = model.table;
         this.value = model.value;
 
-        this.table = determineTableName(data, model, parentTableName);
+        this.table = determineTableType(data, model, parentTableName);
 
         this.color = getColorFromTable(this.table);
 
@@ -49,7 +48,7 @@ class DS {
         if ('Index' === model.type)
             sortIndexRows({ header, rows: this.rows }, model.keys);
 
-        console.log(`${this.type}[${this.path}]: ${this.rows.length}/${data[this.table].rows.length} rows.`);
+        console.log(`${model.id}: ${this.type}[${this.path}]: ${this.rows.length}/${data[this.table].rows.length} rows.`);
 
         this.records = this.rows.map(row => new Record(model, data, row, parentTableName));
     }
@@ -84,7 +83,7 @@ class Record {
         this.row = row;
         this.path = model.table;
 
-        this.table = determineTableName(data, model, parentTableName);
+        this.table = determineTableType(data, model, parentTableName);
 
         const { header, rows: _allRows } = data[this.table];
 

@@ -12,6 +12,9 @@ class CnpyApiController < ApplicationController
     unless params[:single_query].nil?
       args.push('--single_query', params[:single_query])
     end
+    unless params[:membound_factor].nil?
+      args.push('--membound_factor', params[:membound_factor])
+    end
 
     # Run chestnut python script
     poutput, pinfo = Open3.capture2('python3', 'chestnut/run.py', *args) # ...

@@ -1,7 +1,7 @@
-function getTableFromPath(path) {
-  if (!path) throw Error('Cannot get table from missing path: ' + path);
-  return path[path.length - 1];
-}
+// function getTableFromPath(path) {
+//   if (!path) throw Error('Cannot get table from missing path: ' + path);
+//   return path[path.length - 1];
+// }
 const OP_FNS = {
   '<':  (l, r) => l <   r,
   '<=': (l, r) => l <=  r,
@@ -104,35 +104,44 @@ function getRowById(header, rows, id) {
   return rows.find(row => id === row[i]);
 }
 
-function determineTableName(data, model, parentTableName = null) {
-  const assoc = model.association;
+function determineTableType(_data, model, _parentTableName = null) {
+  return model.tableType;
 
-  if (parentTableName && assoc) {
-    if (!data[parentTableName]) throw Error(
-      `Cannot find child table when parent table with name ${parentTableName} doesn't exist.`);
-    if (assoc.leftTable === parentTableName)
-      return assoc.rightTable;
-    if (assoc.rightTable === parentTableName)
-      return assoc.leftTable;
-    throw Error(`Failed to determine name for nested table: ${model.table}, parent: ${parentTableName}`);
-  }
-  else {
-    let name = getTableFromPath(model.table);
-    if (!data[name]) name = name.slice(0, -1);
-    if (!data[name]) throw Error(`Failed to determine name for table: ${model.table}`);
-    return name;
-  }
+  // let name = model.tableType;
+  // if (data[name]) return name;
+  // console.error('Unknown table type: ' + name, model);
+
+  // const assoc = model.association;
+
+  // if (parentTableName && assoc) {
+  //   if (!data[parentTableName]) throw Error(
+  //     `Cannot find child table when parent table with name ${parentTableName} doesn't exist.`);
+  //   if (assoc.leftTable === parentTableName)
+  //     return assoc.rightTable;
+  //   if (assoc.rightTable === parentTableName)
+  //     return assoc.leftTable;
+  //   throw Error(`Failed to determine name for nested table: ${model.table}, parent: ${parentTableName}`);
+  // }
+  // else {
+  //   let name = getTableFromPath(model.table);
+  //   if (!data[name]) name = name.slice(0, -1);
+  //   if (!data[name]) throw Error(`Failed to determine name for table: ${model.table}`);
+  //   return name;
+  // }
 }
 
 function getNestedRows(data, model, header, row, nestedModel) {
-  let tableName = getTableFromPath(model.table);                  // Activities
-  if (!data[tableName]) tableName = tableName.slice(0, -1);       // Activitie
-  if (!data[tableName]) tableName = tableName.slice(0, -2) + 'y'; // Activity
-  if (!data[tableName]) throw Error(`Failed to find table: "${tableName}" from tables ${Object.keys(data)}.`);
-  const nestedName = getTableFromPath(nestedModel.table);
+  const tableName = model.tableType;
+  const nestedName = nestedModel.tableType;
 
-  // const keyManyToOne = nestedName + '_id';
-  // const keyOneToMany = tableName + '_id';
+  // let tableName = getTableFromPath(model.table);                  // Activities
+  // if (!data[tableName]) tableName = tableName.slice(0, -1);       // Activitie
+  // if (!data[tableName]) tableName = tableName.slice(0, -2) + 'y'; // Activity
+  // if (!data[tableName]) throw Error(`Failed to find table: "${tableName}" from tables ${Object.keys(data)}.`);
+  // const nestedName = getTableFromPath(nestedModel.table);
+
+  // // const keyManyToOne = nestedName + '_id';
+  // // const keyOneToMany = tableName + '_id';
 
   const assoc = nestedModel.association;
 
@@ -201,9 +210,9 @@ function getNestedRows(data, model, header, row, nestedModel) {
 
   // slice is HACK for trailing 's'.
   let tableData = data[nestedName];
-  if (!tableData) tableData = data[nestedName.slice(0, -1)];
-  if (!tableData) tableData = data[nestedName.slice(0, -3) + 'y'];
-  if (!tableData) throw Error(`Unknown table: ${nestedName}.`);
+  // if (!tableData) tableData = data[nestedName.slice(0, -1)];
+  // if (!tableData) tableData = data[nestedName.slice(0, -3) + 'y'];
+  // if (!tableData) throw Error(`Unknown table: ${nestedName}.`);
   const { header: nestedHeader, rows: nestedAllRows } = tableData;
 
   console.log('!TODO!', nestedModel.association);
