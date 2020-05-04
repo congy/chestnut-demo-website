@@ -1,3 +1,5 @@
+// Utilities for filtering rows, joins, and evaluating expressions.
+
 // function getTableFromPath(path) {
 //   if (!path) throw Error('Cannot get table from missing path: ' + path);
 //   return path[path.length - 1];

@@ -45,7 +45,8 @@
     ctrl.draw();
     const { ds, qp } = await model_p;
     document.getElementById('json').innerText = JSON.stringify({ ds, qp }, null, 2);
-    writeQueryPlans({ ds, qp });
+    const qpContexts = handleQueryPlans({ ds, qp });
+
     await ctrl.play(ds);
   }
   function replay() {
@@ -53,11 +54,14 @@
     let _ignored = ctrl.play(); // Returns promise.
     return false;
   }
-  function writeQueryPlans({ ds, qp }) {
+  function handleQueryPlans({ ds, qp }) {
     const plansEl = document.getElementById('plans');
+    const qpContexts = [];
     let i = 0;
     for (let i = 0; i < qp.length; i++) {
       const qpInfo = qp[i];
+      const qpContext = qpToContext(qpInfo, ds);
+      qpContexts.push(qpContext);
 
       const h1 = document.createElement('h1')
       h1.innerText = `${i} Query ${qpInfo.qid}, Plan ${qpInfo.pid}`;
@@ -65,7 +69,7 @@
 
       let pre = document.createElement('pre');
       pre.className = 'prettyprint lang-py linenums';
-      pre.innerText = qpToString(qpInfo, ds);
+      pre.innerText = qpContext.toString();
       plans.appendChild(pre);
 
       pre = document.createElement('pre');
@@ -74,6 +78,8 @@
       plans.appendChild(pre);
     }
     PR.prettyPrint();
+
+    return qpContexts;
   }
   init();
 </script>

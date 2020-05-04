@@ -1,3 +1,5 @@
+// Overall controller for animations.
+
 class VisualizerController {
     constructor(svg) {
         this.svg = svg;
@@ -15,6 +17,12 @@ class VisualizerController {
         while (svg.firstChild) {
             svg.removeChild(svg.firstChild);
         }
+        svg.innerHTML = `\
+<defs>
+    <marker id="head" orient="auto" markerHeight="4" refX="3.5" refY="2" markerWidth="4">
+        <path fill="black" d="M0,0 V4 L4,2 Z"></path>
+    </marker>
+</defs>`;
 
         // Build tables.
         const allTableVis = this.allTableVis = {};
@@ -47,12 +55,23 @@ class VisualizerController {
         const chestnutBox = new VisBox(chestnutVis, 'rgba(0, 0, 0, 0.05)', 20); // TODO find out color order.
         this.chestnutVis = chestnutVis;
 
-        const root = new VisStack([ tocDiskVis, chestnutBox ], true, 20);
+        // QUERY VIS START
+        const qpVis = new VisStack([ new VisElem(createTextEl('Query Execution')) ], true, 20);
+        const qpBox = new VisBox(qpVis, 'rgba(0, 0, 0, 0.05)', 20); // TODO something?
+        this.qpVis = qpVis;
+        // QUERY VIS END
+
+        const root = new VisStack([ tocDiskVis, chestnutBox, qpBox ], true, 20);
         root.attach(svg, 0, 0);
     }
     async play(model) {
-        const chestnutModel = new ChestnutModel(model, this.data);
-        chestnutModel.bind(this.svg, this.allTableVis);
-        await chestnutModel.form(this.svg, this.chestnutVis, () => delay(75));
+        this.chestnutModel = new ChestnutModel(model, this.data);
+        this.chestnutModel.bind(this.svg, this.allTableVis);
+        await this.chestnutModel.form(this.svg, this.chestnutVis, () => delay(5)); // TODO set to 50.
+    }
+    async playQp(qpInfo) {
+        this.qpModel = new QueryPlanModel(qpInfo, this.data);
+        this.qpModel.bind(this.svg, this.chestnutModel);
+        await this.qpModel.form(this.svg, this.qpVis, () => delay(100))
     }
 }

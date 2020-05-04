@@ -1,3 +1,5 @@
+// getColorFromTable fn, uses hsluv.
+
 const [
   getColorFromTable,
   getColorTable

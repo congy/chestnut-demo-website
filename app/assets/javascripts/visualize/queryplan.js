@@ -1,3 +1,5 @@
+// For turning query plans into pseudocode (for now?).
+
 class PlanContext {
 
   constructor(qpInfo, allDs, localDs = null) {
@@ -17,9 +19,15 @@ class PlanContext {
     this.vars = new Map();
     // Set of names, possibly including anonymous "unknown" variables.
     this.names = new Set();
+
+    // List of indices.
+    this.localOutputs = [];
+    // "Sub"-contexts.
+    this.subs = [];
   }
 
   writeLine(line, extraIndent = 0) {
+    this.localOutputs.push(this.output.length);
     this.output.push([ this.depth + extraIndent, line ]);
   }
 
@@ -136,6 +144,8 @@ class PlanContext {
 
   sub(newVals = {}) {
     const d = new PlanContext(this.qpInfo, this.allDs, new Map(this.localDs));
+    this.subs.push(d);
+
     d.parent = this;
 
     d.output = this.output;
@@ -275,10 +285,10 @@ function qpToSteps(step, context) {
   return context;
 }
 
-function qpToString(qpInfo, allDs, indent = 4) {
+function qpToContext(qpInfo, allDs, indent = 4) {
   if (qpInfo.inputs.some(inp => 'Parameter' !== inp.expr))
     throw Error(`QP Input not of type parameter.`);
 
   const context = qpToSteps(qpInfo.plan, new PlanContext(qpInfo, allDs));
-  return context.toString(indent);
+  return context;
 }

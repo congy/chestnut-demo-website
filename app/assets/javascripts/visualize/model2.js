@@ -1,3 +1,6 @@
+// "Model" (read: visualization) for chestnut's in-memory data layout, but not
+// for query plans/execution.
+
 class ChestnutModel {
     constructor(model, data) {
         // Top level data structures.
@@ -27,13 +30,12 @@ function getDS(model, data, rows, parentTableName = null) {
 
 class DS {
     constructor(model, data, rows, parentTableName = null) {
-        if (!Array.isArray(rows))
-            throw Error(`ROWS NOT ARRAY: ${rows}.`);
-        if (!rows.every(row => Array.isArray(row)))
-            throw Error(`INDIVIDUAL ROW(S) NOT ARRAY: ${rows}.`);
+        if (!Array.isArray(rows)) throw Error(`ROWS NOT ARRAY: ${rows}.`);
+        if (!rows.every(row => Array.isArray(row))) throw Error(`INDIVIDUAL ROW(S) NOT ARRAY: ${rows}.`);
 
-        this.type = model.type;
-        this.path = model.table;
+        this.type  = model.type;
+        this.path  = model.table;
+        this.id    = model.id
         this.value = model.value;
 
         this.table = determineTableType(data, model, parentTableName);

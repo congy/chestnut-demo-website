@@ -1,3 +1,5 @@
+// SVG utilities, basic Vis classes.
+
 const delay = (d) => new Promise(resolve => setTimeout(resolve, d));
 //const frame = () => new Promise(resolve => window.requestAnimationFrame(resolve));
 //const delayFrame = (d) => Promise.all([ delay(d), frame() ]).then(() => {});
@@ -10,10 +12,10 @@ function moveEl(el, x, y) {
     el.setAttribute('style', `transform: translate(${x}px, ${y}px)`);
 }
 
-function createGroupEl() {
-    const el = document.createElementNS(xmlns, "g");
-    return el;
-}
+// function createGroupEl() {
+//     const el = document.createElementNS(xmlns, "g");
+//     return el;
+// }
 
 function createTextEl(text) {
     const el = document.createElementNS(xmlns, "text");
@@ -29,9 +31,18 @@ function createRectEl() {
     return el;
 }
 
+function createPathEl() {
+    const el = document.createElementNS(xmlns, "path");
+    el.setAttribute('stroke', 'black');
+    el.setAttribute('marker-end', 'url(#head)');
+    el.setAttribute('stroke-width', '2');
+    return el;
+}
+
 class Vis {
     constructor() {
         this.parent = null;
+        this.watchers = [];
     }
     setParent(parent) {
         if (null === parent)
@@ -45,12 +56,44 @@ class Vis {
     }
 }
 
+class Arrow {
+    constructor() {
+        this.tail = { x: 0, y: 0 };
+        this.head = { x: 0, y: 0 };
+
+        this.el = createPathEl();
+    }
+    _update() {
+        this.el.setAttribute('d', `M ${this.tail.x} ${this.tail.y} L ${this.head.x} ${this.head.y}`);
+    }
+    _getLoc(vis) {
+        const { width, height } = vis.size();
+        let { x, y } = vis.loc();
+        x += width / 2;
+        y += height / 2;
+        return { x, y };
+    }
+
+    attach(svg) {
+        svg.appendChild(this.el);
+    }
+
+    setTail(vis) {
+        this.tail = this._getLoc(vis);
+        this._update();
+    }
+    setHead(vis) {
+        this.head = this._getLoc(vis);
+        this._update();
+    }
+}
+
 class VisElem extends Vis {
     constructor(elem) {
         super();
         this.elem = elem;
     }
-    reflow(child) {
+    reflow(_child) {
         this.reflowParent();
     }
     move(x, y) {
@@ -61,14 +104,19 @@ class VisElem extends Vis {
             throw Error('Cannot call size() before attach()');
         return this.elem.getBBox();
     }
+    loc() {
+        throw 'Not Implemented';
+    }
     attach(svg, x, y) {
         this.move(x, y);
         svg.appendChild(this.elem);
     }
     clone(svg) {
-        const copy = new VisElem(elem.cloneNode(true));
-        copy.attach(svg, this.x, this.y);
-        return copy;
+        throw 'Not Implemented';
+        // // this.x, this.y not defined.
+        // const copy = new VisElem(elem.cloneNode(true));
+        // copy.attach(svg, this.x, this.y);
+        // return copy;
     }
 }
 
@@ -92,6 +140,7 @@ class VisBox extends Vis {
         this.x = null;
         this.y = null;
     }
+    // Returns true if size changed.
     _update() {
         let { width, height } = this.item.size();
         width  += 2 * this.pad;
@@ -124,6 +173,9 @@ class VisBox extends Vis {
     }
     size() {
         return { width: this.width, height: this.height };
+    }
+    loc() {
+        return { x: this.x, y: this.y };
     }
     attach(svg, x, y) {
         this.x = x;
@@ -196,6 +248,9 @@ class VisRecord extends Vis {
     }
     size() {
         return { width: this.width, height: this.height };
+    }
+    loc() {
+        return { x: this.x, y: this.y };
     }
     attach(svg, x, y) {
         this.x = x;
@@ -295,6 +350,9 @@ class VisStack extends Vis {
     }
     size() {
         return { width: this.width, height: this.height };
+    }
+    loc() {
+        return { x: this.x, y: this.y };
     }
     attach(svg, x, y) {
         this.move(x, y, svg);
