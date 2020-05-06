@@ -40,7 +40,10 @@ function sortIndexRows({ header, rows }, keys) {
 
 const REGEX_DATE = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
 // Evaluate a expression from chestnut, represented in a JSON tree.
-function evalExpr(e, header, row) {
+// contexts = { qpContext, visContext }
+// If contexts is null, we ignore any parameters and exists constraints.
+// If contexts is not null we evaluate them.
+function evalExpr(e, header, row, contexts = null) {
   switch (e.expr) {
     case 'BinOp': {
       const fn = OP_FNS[e.op];
@@ -48,11 +51,11 @@ function evalExpr(e, header, row) {
         throw Error(`Failed to find function for OP: '${e.op}'.`);
 
       // Handle input parameters.
-      if ('Parameter' === e.lh.expr || 'Parameter' === e.rh.expr)
+      if (!contexts && ('Parameter' === e.lh.expr || 'Parameter' === e.rh.expr))
         return true;
 
-      let lh = evalExpr(e.lh, header, row);
-      let rh = evalExpr(e.rh, header, row); // No short-circuit handling.
+      let lh = evalExpr(e.lh, header, row, contexts);
+      let rh = evalExpr(e.rh, header, row, contexts); // No short-circuit handling.
 
       // Handle mismatched types.
       fixtypes:
@@ -75,8 +78,8 @@ function evalExpr(e, header, row) {
     }
     case 'SetOp': {
       // LH exists in RH (I think).
-      let lh = evalExpr(e.lh, header, row);
-      let rh = evalExpr(e.rh, header, row);
+      let lh = evalExpr(e.lh, header, row, contexts);
+      let rh = evalExpr(e.rh, header, row, contexts);
       console.error(lh, rh);
       throw 'TODO: Need to eval RH completely from top.';
     }
@@ -102,7 +105,15 @@ function evalExpr(e, header, row) {
     case 'QueryField':
       const i = header.indexOf(e.field)
       return row[i];
-    case 'Parameter':
+    case 'Parameter': {
+      if (!contexts) throw Error('Attempting to evaluate paramter without contexts.');
+      const { qpContext, visContext } = contexts;
+      const [ paramName, isNew ] = qpContext.getParamVar(e);
+      if (isNew) throw Error(`Cannot create new (parameter) var when evaluating: ${paramName}.`);
+      const paramValue = visContext.getVarValue(paramName);
+      // console.log(`Eval param, name: ${paramName}, value: ${paramValue}.`);
+      return paramValue;
+    }
     default:
       console.error(e, header, row);
       throw 'SHOULD NOT REACH';

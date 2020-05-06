@@ -259,6 +259,9 @@ function qpToSteps(step, context) {
       break;
     }
     case "ExecSetVarStep": {
+      // TODO: get rid of local context, it's not how it actually works.
+      // In reality the condition applies to subsequent statements (?).
+
       let localContext = context;
       if (step.value.cond) {
         context.writeLine(`if ${context.exprToString(step.value.cond)}:`);
@@ -280,7 +283,7 @@ function qpToSteps(step, context) {
       }
       else {
         // Value is NOT an "atom", it is a collection (EnvCollectionVariable).
-        // - It may be a result?
+        // - It may be a result? Yes I think it has to be a result (outVar).
         // - ??
         if (step.value.var.init) throw Error(`Collection variable had init value: ${step.value.var.init}.`);
 

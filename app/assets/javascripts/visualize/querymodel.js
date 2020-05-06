@@ -51,6 +51,15 @@ class VisContext {
   _getVar(name) {
     return this.varDict.get(name);
   }
+  getVar(name) {
+    const varData = this._getVar(name);
+    if (undefined === varData) throw Error(`Cannot get value for undefined var: ${name}.`);
+    return varData;
+  }
+  getVarValue(name) {
+    return this.getVar(name).value;
+  }
+
   _setVar(name, valVis, value, requireNew = false) {
     let nameAndVarVis;
 
@@ -75,7 +84,7 @@ class VisContext {
   }
   createListVar(name) {
     // Can be a list of values (kinda like a BasicArray) or just a single value; both are handled as lists.
-    const valVis = new VisStack([], false, 5);
+    const valVis = new VisStack([], false, 0);
     this._setVar(name, valVis, [], true);
   }
   createPtrVar(name) {
@@ -91,11 +100,22 @@ class VisContext {
     valVis.push(record.recordVis.clone(this.svg));
 
     // Set value. Also sets varVis to itself.
-    const value = { header: record.header, row: record.row };
+    const value = [ { header: record.header, row: record.row } ]; // Must be a list
     this._setVar(name, valVis, value);
   }
   pushListVar(name) {
     throw 'TODO'; // TODO.
+  }
+
+  // Push the `valName` var to `listName` list var.
+  pushToListVar(listName, valName) {
+    const { valVis: lValVis, value: lValue } = this.getVar(listName);
+    const { valVis: vValVis, value: vValue } = this.getVar(valName);
+
+    lValue.push(vValue); // Clone?
+    lValVis.push(vValVis.items[0].clone(this.svg));
+
+    // TODO: Something here?
   }
 }
 
@@ -169,21 +189,50 @@ async function qpExec(step, qpContext, visContext) {
         console.log(`Set loop var: ${loopVar} = ID ${recordModel.recordId}`);
 
         visContext.setListVar(loopVar, recordModel);
-
-        // const arr = new Arrow(qpVis, recordModel.recordVis);
-        // arr.attach(svg);
-
         await delayFn();
+
+        qpExec(step.value.steps, loopContext, visContext);
       }
 
       // TODO
       break;
     }
     case "ExecSetVarStep": {
-      let localContext = context;
+      let localContext = qpContext;
       if (step.value.cond) {
         // TODO EVAL CONDITION!
-        localContext = context.subs[0];
+        const { header, row } = visContext.getVarValue(qpContext.loopVar)[0]; // Get first/only val from list.
+        const condEval = evalExpr(step.value.cond, header, row, { qpContext, visContext });
+        console.log(`CONDITION: ${condEval}.`);
+        if (false === condEval) // No set if cond is false.
+          break;
+
+        localContext = qpContext.subs[0];
+      }
+
+      if (step.value.var.atom) {
+        // Value is an "atom", meaning several things:
+        // - It is a single value (not a collection).
+        // - It is not a output result.
+        throw 'TODO'; // TODO.
+        // const [ aVar, isNew ] = localContext.getEnvVar(step.value.var);
+        // if ('count()' == step.value.expr) {
+        //   if (isNew) throw Error('ExecSetVarStep with expr count() cannot be new.');
+        //   localContext.writeLine(`${aVar} += 1`)
+        // }
+        // else if (isNew)
+        //   localContext.writeLine(`${aVar}: ${step.value.var.type} = ${step.value.expr.value}`);
+        // else
+        //   localContext.writeLine(`${aVar} = ${step.value.expr.value}`);
+      }
+      else {
+        // Value is NOT an "atom", it is a collection (EnvCollectionVariable).
+        // - It may be a result? Yes I think it has to be a result (outVar).
+        // - ??
+        if (step.value.var.init) throw Error(`Collection variable had init value: ${step.value.var.init}.`);
+
+        // Schema: qpContext.parent.outVar .push( localContext.loopVar )
+        visContext.pushToListVar(localContext.parent.outVar, localContext.loopVar);
       }
 
       // TODO
