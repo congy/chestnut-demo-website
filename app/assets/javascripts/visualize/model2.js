@@ -80,14 +80,17 @@ class IndexDS extends DS {
 }
 
 
+// ONLY RECORDS IN CHESTNUT NESTED DATA STRUCTURE. NOT IN QUERY PLAN EXECUTION.
 class Record {
     constructor(model, data, row, parentTableName = null) {
         this.row = row;
         this.path = model.table;
+        this.recordVis = null;
 
         this.table = determineTableType(data, model, parentTableName);
 
         const { header, rows: _allRows } = data[this.table];
+        this.header = header; // TODO remove me? Used by query execution.
 
         this.recordId = row[header.indexOf('id')];
         if (this.recordId < 0) throw new Error(`Bad recordId: ${this.recordId}.`);
@@ -107,18 +110,18 @@ class Record {
         const recordVisToClone = tableVis.get(this.recordId - 1);
         if (!recordVisToClone) return; // SHIELD against invalid FK constraint.
 
-        this._recordVis = recordVisToClone.clone(svg, this.dotted);
+        this.recordVis = recordVisToClone.clone(svg, this.dotted);
 
         this.nested.forEach(nest => nest.bind(svg, allTableVis));
     }
     async form(svg, dsVis, delayFn) {
-        if (!this._recordVis) return; // SHIELD.
+        if (!this.recordVis) return; // SHIELD.
 
-        dsVis.push(this._recordVis);
+        dsVis.push(this.recordVis);
 
         for (const nest of this.nested) {
             await delayFn();
-            await nest.form(svg, this._recordVis, delayFn);
+            await nest.form(svg, this.recordVis, delayFn);
         }
     }
 }

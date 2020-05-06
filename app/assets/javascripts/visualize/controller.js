@@ -67,11 +67,15 @@ class VisualizerController {
     async play(model) {
         this.chestnutModel = new ChestnutModel(model, this.data);
         this.chestnutModel.bind(this.svg, this.allTableVis);
-        await this.chestnutModel.form(this.svg, this.chestnutVis, () => delay(5)); // TODO set to 50.
+        await this.chestnutModel.form(this.svg, this.chestnutVis, () => Promise.resolve()); //delay(0)); // TODO set to 50.
     }
-    async playQp(qpInfo) {
+    async playQp(qpInfo, qpContext) {
         this.qpModel = new QueryPlanModel(qpInfo, this.data);
-        this.qpModel.bind(this.svg, this.chestnutModel);
-        await this.qpModel.form(this.svg, this.qpVis, () => delay(100))
+        // this.qpModel.bind(this.svg, this.chestnutModel);
+        // await this.qpModel.form(this.svg, this.qpVis, () => delay(100))
+
+        // TODO
+        // Delay needs to match or be greater than css transition speed.
+        this.qpModel.form(qpInfo, qpContext, this.svg, this.qpVis, this.chestnutModel, () => delay(1000));
     }
 }

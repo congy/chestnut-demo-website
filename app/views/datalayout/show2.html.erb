@@ -3,13 +3,13 @@
   <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
   <style>
     svg * {
-      transition: transform 0.8s cubic-bezier(0.47, 0, 0.745, 0.715);
+      transition: transform 0.5s cubic-bezier(0.47, 0, 0.745, 0.715);
     }
     svg rect {
       transition:
-        transform 0.8s cubic-bezier(0.47, 0, 0.745, 0.715),
-        width 0.8s cubic-bezier(0.47, 0, 0.745, 0.715),
-        height 0.8s cubic-bezier(0.47, 0, 0.745, 0.715);
+        transform 0.5s cubic-bezier(0.47, 0, 0.745, 0.715),
+        width 0.5s cubic-bezier(0.47, 0, 0.745, 0.715),
+        height 0.5s cubic-bezier(0.47, 0, 0.745, 0.715);
     }
   </style>
 <% end %>
@@ -46,8 +46,14 @@
     const { ds, qp } = await model_p;
     document.getElementById('json').innerText = JSON.stringify({ ds, qp }, null, 2);
     const qpContexts = handleQueryPlans({ ds, qp });
+    window.qpContexts = qpContexts; // TODO removeme
 
     await ctrl.play(ds);
+    
+    // TODO
+    await delay(1000);
+    const i = 0; // TODO
+    await ctrl.playQp(qp[i], qpContexts[i]);
   }
   function replay() {
     ctrl.draw();

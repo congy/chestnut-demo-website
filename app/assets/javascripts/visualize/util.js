@@ -42,7 +42,7 @@ const REGEX_DATE = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
 // Evaluate a expression from chestnut, represented in a JSON tree.
 function evalExpr(e, header, row) {
   switch (e.expr) {
-    case 'BinOp':
+    case 'BinOp': {
       const fn = OP_FNS[e.op];
       if (!fn)
         throw Error(`Failed to find function for OP: '${e.op}'.`);
@@ -71,9 +71,16 @@ function evalExpr(e, header, row) {
           console.error(`Unknown BinOp LH/RH types: LH: ${lh}, ${typeof lh}; RH ${rh} ${typeof rh}.`);
         }
       }
-
       return fn(lh, rh);
-    case 'AssocOp':
+    }
+    case 'SetOp': {
+      // LH exists in RH (I think).
+      let lh = evalExpr(e.lh, header, row);
+      let rh = evalExpr(e.rh, header, row);
+      console.error(lh, rh);
+      throw 'TODO: Need to eval RH completely from top.';
+    }
+    case 'AssocOp': {
       // Handle FK id case.
       if ('QueryField' === e.rh.expr && 'id' === e.rh.field) {
         if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
@@ -84,6 +91,7 @@ function evalExpr(e, header, row) {
       // Otherwise crash.
       console.error(e, header, row);
       throw 'TODO';
+    }
     case 'AtomValue':
       if ("'" === e.value[0])
         return e.value.slice(1, -1);

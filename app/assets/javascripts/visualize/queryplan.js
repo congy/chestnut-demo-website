@@ -2,23 +2,35 @@
 
 class PlanContext {
 
-  constructor(qpInfo, allDs, localDs = null) {
+  constructor(qpInfo, tlds, availDs = null) {
+    // The plain JSON representation of the query plan.
     this.qpInfo = qpInfo;
-    this.allDs = allDs;
+    // Top level data structures, plain JSON representation.
+    this.tlds = tlds;
 
-    this.localDs = localDs || new Map(allDs.map(ds => [ ds.id, ds ]));
+    // All available datastructures. Always includes the TLDS,
+    // plus any additional nested datastructures encountered.
+    this.availDs = availDs || new Map(tlds.map(ds => [ ds.id, ds ]));
 
+    // Parent PlanContext.
     this.parent = null;
 
+    // List of two-element "tuples", [ int indent depth, str ].
     this.output = [];
+    // The current event depth.
     this.depth = 0;
-    this.loopVar = null;
-    this.outVar = null;
 
     // Mapping from known variables to their names.
     this.vars = new Map();
     // Set of names, possibly including anonymous "unknown" variables.
     this.names = new Set();
+    // Set of strictly locally defined names. Deleted after leaving this context.
+    this.localNames = new Set();
+
+    // Name of the most recent var we are looping over.
+    this.loopVar = null;
+    // Name of the most recent output var.
+    this.outVar = null;
 
     // List of indices.
     this.localOutputs = [];
@@ -47,6 +59,7 @@ class PlanContext {
       name = `${pref}_${i}`;
 
     this.names.add(name);
+    this.localNames.add(name);
     return name;
   }
 
@@ -77,7 +90,7 @@ class PlanContext {
 
   // Get actual DS json from ID. Only applies to in-scope.
   getDs(dsId) {
-    return this.localDs.get(dsId);
+    return this.availDs.get(dsId);
   }
 
   // Get var name for a datastructure ID.
@@ -114,6 +127,14 @@ class PlanContext {
         out.push(')');
         break;
       }
+      case 'SetOp': {
+        out.push('(');
+        this.exprToString(e.lh, out);
+        out.push(' EXISTS IN ');
+        this.exprToString(e.rh, out);
+        out.push(')');
+        break;
+      }
       case 'AssocOp': {
         // // Handle FK id case.
         // if ('QueryField' === e.rh.expr && 'id' === e.rh.field) {
@@ -142,8 +163,8 @@ class PlanContext {
     return out.join('');
   }
 
-  sub(newVals = {}) {
-    const d = new PlanContext(this.qpInfo, this.allDs, new Map(this.localDs));
+  sub() {
+    const d = new PlanContext(this.qpInfo, this.allDs, new Map(this.availDs));
     this.subs.push(d);
 
     d.parent = this;
@@ -156,7 +177,6 @@ class PlanContext {
     d.vars = new Map(this.vars);
     d.names = new Set(this.names);
 
-    Object.assign(d, newVals);
     return d;
   }
 
@@ -183,13 +203,11 @@ function qpToSteps(step, context) {
       }
       const outType = out.atom ? out.type : `List[${out.type}]`;
       context.writeLine(`def query_${qpInfo.qid}(${inputs.join(', ')}) -> ${outType}:`);
+      context.writeLine(`${context.outVar}: ${outType} = ${out.atom ? 'null' : '[]'}`, 1);
 
-      const subContext = context.sub();
-      subContext.writeLine(`${context.outVar}: ${outType} = ${out.atom ? 'null' : '[]'}`);
+      qpToSteps(step.value.steps, context.sub());
 
-      qpToSteps(step.value.steps, subContext);
-
-      subContext.writeLine(`return ${context.outVar}`);
+      context.writeLine(`return ${context.outVar}`, 1);
       break;
     }
     case "ExecStepSeq": {
@@ -197,27 +215,29 @@ function qpToSteps(step, context) {
       break;
     }
     case "ExecScanStep": {
+      // JSON representation.
       const thisDs = context.getDs(step.value.idx);
-      if (!thisDs) throw Error(`Missing DS IDX ${step.value.idx}.`);
+      if (!thisDs) throw Error(`Context missing DS IDX ${step.value.idx}.`);
 
       // Get nested datastructures.
       let targetDs = thisDs;
       // If this is a ptr index we need to follow the pointer.
       if ('Index' === thisDs.type && 'ptr' === thisDs.value.type) {
         targetDs = context.getDs(thisDs.value.target);
-        if (!targetDs) throw Error(`Missing Index target IDX ${thisDs.value.target}`);
+        if (!targetDs) throw Error(`Context missing Index target IDX ${thisDs.value.target}`);
       }
       const nestedDses = targetDs.value.nested;
 
-      // Create subContext.
-      const loopVar = context.makeAnonVar(`${thisDs.tableType}`);
-      const subContext = context.sub({ loopVar });
+      // Create loopContext.
+      const loopContext = context.sub();
+      const loopVar = loopContext.makeAnonVar(`${thisDs.tableType}`);
+      loopContext.loopVar = loopVar;
       // Assign nested.
       for (const nestedDs of nestedDses)
-        subContext.localDs.set(nestedDs.id, nestedDs);
+        loopContext.availDs.set(nestedDs.id, nestedDs);
 
       // Get nested datastructures back for the for-loop.
-      const nestedDsVars = nestedDses.map(nestedDs => subContext.getDsVar(nestedDs.id,
+      const nestedDsVars = nestedDses.map(nestedDs => loopContext.getDsVar(nestedDs.id,
         `${thisDs.tableType}_${nestedDs.tableType}`)[0]);
 
       // Print the line.
@@ -235,7 +255,7 @@ function qpToSteps(step, context) {
         context.writeLine(`for ${loopVars} in ${dsVar}:`);
 
       // Recurse.
-      qpToSteps(step.value.steps, subContext);
+      qpToSteps(step.value.steps, loopContext);
       break;
     }
     case "ExecSetVarStep": {
@@ -285,10 +305,10 @@ function qpToSteps(step, context) {
   return context;
 }
 
-function qpToContext(qpInfo, allDs, indent = 4) {
+function qpToContext(qpInfo, tlds, indent = 4) {
   if (qpInfo.inputs.some(inp => 'Parameter' !== inp.expr))
     throw Error(`QP Input not of type parameter.`);
 
-  const context = qpToSteps(qpInfo.plan, new PlanContext(qpInfo, allDs));
+  const context = qpToSteps(qpInfo.plan, new PlanContext(qpInfo, tlds));
   return context;
 }

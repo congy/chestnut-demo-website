@@ -56,38 +56,6 @@ class Vis {
     }
 }
 
-class Arrow {
-    constructor() {
-        this.tail = { x: 0, y: 0 };
-        this.head = { x: 0, y: 0 };
-
-        this.el = createPathEl();
-    }
-    _update() {
-        this.el.setAttribute('d', `M ${this.tail.x} ${this.tail.y} L ${this.head.x} ${this.head.y}`);
-    }
-    _getLoc(vis) {
-        const { width, height } = vis.size();
-        let { x, y } = vis.loc();
-        x += width / 2;
-        y += height / 2;
-        return { x, y };
-    }
-
-    attach(svg) {
-        svg.appendChild(this.el);
-    }
-
-    setTail(vis) {
-        this.tail = this._getLoc(vis);
-        this._update();
-    }
-    setHead(vis) {
-        this.head = this._getLoc(vis);
-        this._update();
-    }
-}
-
 class VisElem extends Vis {
     constructor(elem) {
         super();
@@ -110,6 +78,11 @@ class VisElem extends Vis {
     attach(svg, x, y) {
         this.move(x, y);
         svg.appendChild(this.elem);
+
+        this.elem.getBBox(); // HACK: makes browser position element.
+    }
+    detach() {
+        this.elem.remove();
     }
     clone(svg) {
         throw 'Not Implemented';
@@ -186,9 +159,15 @@ class VisBox extends Vis {
         this.item.attach(svg, x + this.pad, y + this.pad);
 
         this._update();
+
+        this.rect.getBBox(); // HACK: makes browser position element.
+    }
+    detach() {
+        this.rect.remove();
+        this.item.detach();
     }
     clone(svg) {
-        throw new Error('not implemented.');
+        throw new Error('NOT IMPLEMENTED.');
         const copy = new VisBox(this.item.clone(svg), this.color, this.pad);
         copy.attach(svg, this.x, this.y);
         return copy;
@@ -261,6 +240,10 @@ class VisRecord extends Vis {
 
         this.width = width;
         this.height = height;
+    }
+    detach() {
+        this.box.detach();
+        this.stack.detach();
     }
     clone(svg, boxDotted = false) {
         // Note: boxDotted not cloned.
@@ -357,8 +340,14 @@ class VisStack extends Vis {
     attach(svg, x, y) {
         this.move(x, y, svg);
     }
+    // Does not actually detach stack since the stack does
+    // not exist in the DOM. It is only a list/container.
+    detach() {
+        // TODO animate?
+        this.items.forEach(x => x.detach());
+    }
     clone(svg) {
-        throw Error('no clone visstack yet :(');
+        throw Error('Cannot clone VisStack (yet).');
     }
 
     length() {
@@ -370,7 +359,63 @@ class VisStack extends Vis {
 
         this.reflow(); // TODO could make this more efficient (?).
     }
+    // TODO: clear() detaches but pop() does not.
+    clear() {
+        if (!this.items.length) return;
+        // Only really detaches children.
+        this.detach();
+        // Reset items.
+        this.items = [];
+        this.reflow(); // TODO could make this more efficient (?).
+    }
+    // TODO: clear() detaches but pop() does not.
+    pop() {
+        if (!this.items.length) return;
+        this.items.pop(); //.detach();
+        this.reflow(); // TODO could make this more efficient (?).
+    }
     get(i) {
         return this.items[i];
+    }
+}
+
+class Arrow {
+    constructor(tail = null, head = null) {
+        this.tail = { x: 0, y: 0 };
+        this.head = { x: 0, y: 0 };
+        this.el = createPathEl();
+
+        if (tail) this.setTail(tail);
+        if (head) this.setHead(head);
+    }
+    _update() {
+        this.el.setAttribute('d', `M ${this.tail.x} ${this.tail.y} L ${this.head.x} ${this.head.y}`);
+    }
+    _getLoc(vis) {
+        const { width, height } = vis.size();
+        let { x, y } = vis.loc();
+        x += width / 2;
+        y += height / 2;
+        return { x, y };
+    }
+
+    attach(svg) {
+        svg.appendChild(this.el);
+    }
+    detach() {
+        this.el.remove();
+    }
+
+    setTail(vis) {
+        this.tail = this._getLoc(vis);
+        this._update();
+    }
+    setHead(vis) {
+        this.head = this._getLoc(vis);
+        this._update();
+    }
+
+    remove() {
+        this.el.remove();
     }
 }
