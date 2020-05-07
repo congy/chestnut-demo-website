@@ -120,6 +120,44 @@ function evalExpr(e, header, row, contexts = null) {
   }
 }
 
+// { qid, inputs, outputs, pred, pid, plan } = qpInfo
+function getSuitableParamValues(qpInfo, data) {
+  const out = {};
+
+  const { header, rows } = data[qpInfo.output.type];
+  const row = rows[(Math.random() * rows.length) | 0];
+
+  const stack = [ qpInfo.pred ];
+  while (stack.length) {
+    const e = stack.pop(); 
+    if ('BinOp' !== e.expr) {
+      console.error(e);
+      throw Error(`Encountered non-binary op searching for param value: ${e.expr}.`);
+    }
+    let param, expr;
+    if ('Parameter' === e.lh.expr) {
+      if ('Parameter' === e.rh.expr) throw Error('BinOp has two parameters.')
+      param = e.lh;
+      expr = e.rh;
+    }
+    else if ('Parameter' === e.rh.expr) {
+      param = e.rh;
+      expr = e.lh;
+    }
+    else {
+      // Neither is param so we don't really care about the value.
+      stack.push(e.lh, e.rh);
+      continue;
+    }
+
+    let val = evalExpr(expr, header, row);
+    if ('oid' === param.type || 'uint' === param.type)
+      val = Number(val)
+    out[param.symbol] = val;
+  }
+  return out;
+}
+
 function getRowById(header, rows, id) {
   const i = header.indexOf('id');
   return rows.find(row => id === row[i]);

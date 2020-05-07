@@ -8,6 +8,7 @@ parser.add_argument('--scale', type = float,
 parser.add_argument('--membound_factor', type = float, default = 1.7,
         help = 'Membound factor, should be greater than 1. Default: 1.7')
 parser.add_argument('--gen_cpp', action = 'store_true')
+parser.add_argument('--vvv', action = 'store_true')
 
 args = parser.parse_args()
 
@@ -23,4 +24,4 @@ from repo.benchmark.kandan import kandan
 kandan.run(single_query = args.single_query,
     gen_tsv = True, gen_cpp = args.gen_cpp,
     membound_factor = args.membound_factor,
-    run_test_read_overall = False, quiet = True)
+    run_test_read_overall = False, quiet = not args.vvv)

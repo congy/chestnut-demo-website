@@ -4,10 +4,10 @@ class VisualizerController {
     constructor(svg) {
         this.svg = svg;
     }
-    async load() { // TODO: only loads TSV file.
-        const res = await fetch('/api/tsv');
-        const json = await res.json();
-        this.data = json;
+    load(data) {
+        // const res = await fetch('/api/tsv');
+        // const json = await res.json();
+        this.data = data; //json;
     }
     draw() {
         const svg = this.svg;

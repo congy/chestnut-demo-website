@@ -30,8 +30,8 @@ class QueryPlanModel {
     // this.ARR.attach(svg);
     // console.error(this.ARR);
 
-    const visContext = new VisContext(svg, qpVis, chestnutModel, delayFn, this.data);
-    await qpExec(qpInfo.plan, qpContext, visContext);
+    this.visContext = new VisContext(svg, qpVis, chestnutModel, delayFn, this.data);
+    await qpExec(qpInfo.plan, qpContext, this.visContext);
   }
 }
 
@@ -43,6 +43,9 @@ class VisContext {
     this.delayFn = delayFn;
     // Tabular data.
     this.data = data;
+
+    // Available datastructures. (TODO: removing variables when they go out of scope).
+    this.availDs = new Map(Object.values(chestnutModel.tlds).map(ds => [ ds.id, ds ]));
 
     // Variable data during query exection. Changes whenever a variable changes.
     this.varDict = new Map();
@@ -131,13 +134,16 @@ async function qpExec(step, qpContext, visContext) {
       if (isNew) throw 'NEW VARIABLE CREATED!!'; // TODO REMOVE
       visContext.createListVar(outName);
 
-      for (const inpInfo of qpContext.qpInfo.inputs) {
+      const paramValues = getSuitableParamValues(qpContext.qpInfo, visContext.data);
+
+      for (let i = 0; i < qpContext.qpInfo.inputs.length; i++) {
+        const inpInfo = qpContext.qpInfo.inputs[i];
+        const inpValue = paramValues[inpInfo.symbol];
+
         const [ inpName, inpIsNew ] = qpContext.getParamVar(inpInfo);
         if (inpIsNew) throw 'NEW VARIABLE CREATED!!'; // TODO REMOVE
 
-        const { header: cHead, rows: cRows } = visContext.data['channel']; // TODO THIS IS TEMP HACK.
-        const value = cRows[(cRows.length * Math.random()) | 0][cHead.indexOf('name')];
-        visContext.createAtomVar(inpName, value);
+        visContext.createAtomVar(inpName, inpValue);
       }
 
       await qpExec(step.value.steps, qpContext.subs[0], visContext);
@@ -151,25 +157,19 @@ async function qpExec(step, qpContext, visContext) {
       break;
     }
     case "ExecScanStep": {
-      const idx = step.value.idx;
+      let idx = step.value.idx;
+      // If this is a ptr index we need to follow the pointer.
       // JSON datastructure representation.
       const thisDs = qpContext.getDs(idx);
-      // model2.js datastructure model.
+      if ('Index' === thisDs.type && 'ptr' === thisDs.value.type)
+        idx = thisDs.value.target;
 
-      // TODO: this needs to be grabbed from some context. TODO TODO TODO TODO TODO.
-      const dsModel = visContext.chestnutModel.tlds.find(tlds => idx === tlds.id);
-
-      // Error checking.
-      if (!thisDs) throw Error(`QP Context missing DS IDX ${idx}.`);
-      if (!dsModel) throw Error(`Chestnut model missing DS IDX ${idx}.`);
-
-      // // TODO
-      // // If this is a ptr index we need to follow the pointer.
-      // if ('Index' === thisDs.type && 'ptr' === thisDs.value.type) {
-      //   const targetDs = qpContext.getDs(thisDs.value.target);
-      //   if (!targetDs) throw Error(`QP Context missing Index target IDX ${thisDs.value.target}`);
-      //   break; // TODO do something here.
-      // }
+      // Grab DS Model from **VIS** context.
+      const dsModel = visContext.availDs.get(idx);
+      //const dsModel = visContext.chestnutModel.tlds.find(tlds => idx === tlds.id);
+      if (!dsModel)
+        throw Error(`Chestnut model missing DS IDX ${idx}, ` +
+        `available: ${Array.from(visContext.availDs.keys())}.`);
 
       const loopContext = qpContext.subs[0];
       const loopVar = loopContext.loopVar;
@@ -191,7 +191,14 @@ async function qpExec(step, qpContext, visContext) {
         visContext.setListVar(loopVar, recordModel);
         await delayFn();
 
-        qpExec(step.value.steps, loopContext, visContext);
+        // Assign nested DS to visContext.
+        console.log(recordModel.nested);
+        for (const nested of recordModel.nested) {
+          console.log('Set DS w/ ID: ' + nested.id);
+          visContext.availDs.set(nested.id, nested);
+        }
+
+        await qpExec(step.value.steps, loopContext, visContext);
       }
 
       // TODO
