@@ -12,6 +12,7 @@ const OP_FNS = {
   '>':  (l, r) => l >   r,
   '&&': (l, r) => l &&  r,
   '||': (l, r) => l ||  r,
+  'like': (val, pat) => val.includes(pat),
 };
 
 function getRowSubsetByCondition({ header, rows }, cond = null) {
@@ -153,8 +154,13 @@ function getSuitableParamValues(qpInfo, data) {
     let val = evalExpr(expr, header, row);
     if ('oid' === param.type || 'uint' === param.type)
       val = Number(val)
+    else if ('like' === e.op) {
+      const words = val.split(/\s+/);
+      val = words[(Math.random() * words.length) | 0];
+    }
     out[param.symbol] = val;
   }
+
   return out;
 }
 
