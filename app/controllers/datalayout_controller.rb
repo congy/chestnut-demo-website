@@ -3,6 +3,7 @@ class DatalayoutController < ApplicationController
 	@customapp = Customapp.find_by_id(params[:id])
 	app_detail = @customapp.to_json.to_s
 
+	'''
 	ctx = ZMQ::Context.new
   	@rep_sock = ctx.socket(ZMQ::REQ)
   	rc = @rep_sock.connect('tcp://127.0.0.1:5555')
@@ -13,6 +14,8 @@ class DatalayoutController < ApplicationController
 	puts "Hello! received #{data}"
 	@message = data
 	@rep_sock.close()
+	'''
+
   end
 
   def show2

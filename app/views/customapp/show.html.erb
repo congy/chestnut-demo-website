@@ -1,18 +1,53 @@
 <% provide(:title, "Help") %>
 <h1><%= @customapp.name %></h1>
 <p>
-<div class="row">
-	<% @customapp.webpages.each do |webpage| %> 
-  		<div class="col-sm-4">
-		<h2><b> <%= webpage.name %> </b></h1><br>
-  		<%= link_to image_tag(webpage.screenshot_filename, style: "width: 100%", alt: webpage.name),
-              webpage_path(:id=>webpage.id) %>
+
+<%= form_for @customapp do |f| %>
+  <% @customapp.webpages.each do |webpage| %> 
+		<div style="float:right; width: 400px">
+			<h2><b> <%= webpage.name %> </b></h2>
+			<br>
+			<% webpage.queries.each_with_index do |query, index| %>
+				<b>Query <%= (index+1) %>: </b>
+				<% query.query.split('#').each_with_index do |queryline, index| %>
+					<% if index == 0 %>
+						<%= queryline %>
+					<% else %>
+						&nbsp; &nbsp; &nbsp; <%= queryline %>
+					<% end %>
+					<br>
+				<% end %>
+			<% end %>
+			<br>
+			<b>Query weight: </b> <%= webpage.custom_weight==0 ? webpage.weight : webpage.custom_weight %>
+			<br>
+			<br>
+			<%= f.fields_for "webpages[]", webpage do |pf| %>
+				<b>Choose page weight:</b><br />
+				<%= pf.radio_button :weight, '0' %> 0 <br />
+				<%= pf.radio_button :weight, '1' %> 1 <br />
+				<%= pf.radio_button :weight, '10' %> 10 <br />
+				<b>Or manually input a page weight:</b>
+      		<%= pf.text_field :custom_weight, size: 10 %> <br />
+				<button class="btn btn-info" type="submit">Save</button>
+			<% end %>
 		</div>
+		<div class="column">
+			<%= link_to image_tag(webpage.screenshot_filename, style: "width: 50%", alt: webpage.name),
+              webpage_path(:id=>webpage.id) %>
+  	</div>
 	<% end %>
-</div>
-</p>
+<% end %>
+
+<br>
+<br>
+
+<%= link_to "Show data layout", showlayout_path(:id=>@customapp.id), class: "btn btn-lg btn-primary" %>
+
+<!--
 <p>
   <%= link_to "Edit page weight", edit_customapp_path(:id=>@customapp.id), class: "btn btn-lg btn-primary" %>
   <%= link_to "Show data layout", showlayout_path(:id=>@customapp.id), class: "btn btn-lg btn-primary" %>
   <%= link_to "Evaluation", evaluate_path(:id=>@customapp.id), class: "btn btn-lg btn-primary" %>
 </p>
+-->
