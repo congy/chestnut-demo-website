@@ -38,6 +38,17 @@
               webpage_path(:id=>webpage.id) %>
   	</div>
 	<% end %>
+
+  <!--
+  <%= f.fields_for :mem_bound do |pf| %>
+    <b>Choose a memory bound:</b><br />
+		<%= pf.radio_button :mem_bound '1.2' %> 1.2x data size <br />
+		<%= pf.radio_button :mem_bound '1.7' %> 1.7x data size <br />
+		<%= pf.radio_button :mem_bound '3' %> 3x data size<br />
+		<button class="btn btn-info" type="submit">Save</button>
+  <% end %>
+  -->
+
 <% end %>
 
 <br>
