@@ -26,8 +26,8 @@ class CnpyApiController < ApplicationController
     #  args.push('--membound_factor', params[:membound_factor])
     #end
 
-    args.push('--membound_factor', @customapp.mem_bound)
-    #args.push('--queries', queries.join(','))
+    args.push('--membound_factor', "#{@customapp.mem_bound}")
+    #args.push('--queries', queries.join('|'))
     puts ("args = #{args.inspect}")
 
     # Run chestnut python script
