@@ -69,7 +69,9 @@ class VisContext {
     if (this.varDict.has(name)) {
       if (requireNew) throw Error(`Cannot create var that already exists: "${name}".`);
       nameAndVarVis = this.varDict.get(name).nameAndVarVis;
-      nameAndVarVis.pop();
+      const oldValVis = nameAndVarVis.pop();
+      // Detach if not self-replacement.
+      if (oldValVis && oldValVis !== valVis) oldValVis.detach();
       nameAndVarVis.push(valVis);
     }
     else {
@@ -80,6 +82,9 @@ class VisContext {
     }
     this.varDict.set(name, { valVis, nameAndVarVis, value });
   }
+  varExists(name) {
+    return this.varDict.has(name);
+  }
   createAtomVar(name, value = null) {
     // Should be just a int, string, or null. So JSON.stringify can be (ab)used.
     const valVis = new VisElem(createTextEl(JSON.stringify(value)));
@@ -88,12 +93,17 @@ class VisContext {
   createListVar(name) {
     // Can be a list of values (kinda like a BasicArray) or just a single value; both are handled as lists.
     const valVis = new VisStack([], false, 0);
-    this._setVar(name, valVis, [], true);
+    this._setVar(name, valVis, [], false);
   }
-  createPtrVar(name) {
-    // TODO
-    throw 'NOT IMPLEMENTED';
-  }
+  // deleteVar(name) {
+  //   const { valVis, nameAndVarVis, value } = this.getVar(name);
+  //   const i = this.qpVis.items.indexOf(nameAndVarVis);
+  //   this.qpVis.remove(i);
+  // }
+  // createPtrVar(name) {
+  //   // TODO
+  //   throw 'NOT IMPLEMENTED';
+  // }
 
   // Clears and sets a list to a single record.
   setListVar(name, record) {
@@ -154,6 +164,10 @@ async function qpExec(step, qpContext, visContext) {
         await qpExec(subStep, qpContext, visContext);
         await delayFn();
       }
+      // // Clear locally scoped variables.
+      // console.log(`Delete var: ${qpContext.loopVar}.`);
+      // visContext.deleteVar(qpContext.loopVar);
+
       break;
     }
     case "ExecScanStep": {
@@ -173,8 +187,8 @@ async function qpExec(step, qpContext, visContext) {
 
       const loopContext = qpContext.subs[0];
       const loopVar = loopContext.loopVar;
-      console.log(`Loop context with loop var: ${loopVar}`);
-      visContext.createListVar(loopVar); // Added.
+      console.log(`Loop context with loop var: ${loopVar} (out var: ${loopContext.outVar}).`);
+      visContext.createListVar(loopVar);
 
       // // TODO: handle index bounds.
       // if (step.value.exact) {
@@ -192,7 +206,6 @@ async function qpExec(step, qpContext, visContext) {
         await delayFn();
 
         // Assign nested DS to visContext.
-        console.log(recordModel.nested);
         for (const nested of recordModel.nested) {
           console.log('Set DS w/ ID: ' + nested.id);
           visContext.availDs.set(nested.id, nested);
@@ -238,8 +251,19 @@ async function qpExec(step, qpContext, visContext) {
         // - ??
         if (step.value.var.init) throw Error(`Collection variable had init value: ${step.value.var.init}.`);
 
-        // Schema: qpContext.parent.outVar .push( localContext.loopVar )
-        visContext.pushToListVar(localContext.parent.outVar, localContext.loopVar);
+        // Schema: qpContext.parent.loopVar .push( localContext.loopVar )
+        // Ignore outVar since it is temp for clones.
+        console.log('lc.lv', localContext.loopVar, 'lc.ov', localContext.outVar);
+        console.log('qpc.lv', qpContext.loopVar, 'qpc.ov', qpContext.outVar);
+        console.log('lc.p.lv', localContext.parent.loopVar, 'lc.p.ov', localContext.parent.outVar);
+        console.log('lc.p.p.ov', localContext.parent.parent.loopVar);
+
+        const parentContext = localContext.parent;
+        let targetVar = parentContext.outVar;
+        if (!visContext.varExists(targetVar))
+          targetVar = parentContext.loopVar;
+
+        visContext.pushToListVar(targetVar, localContext.loopVar);
       }
 
       // TODO

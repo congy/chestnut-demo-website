@@ -371,12 +371,17 @@ class VisStack extends Vis {
     // TODO: clear() detaches but pop() does not.
     pop() {
         if (!this.items.length) return;
-        this.items.pop(); //.detach();
+        const v = this.items.pop(); //.detach();
         this.reflow(); // TODO could make this more efficient (?).
+        return v;
     }
     get(i) {
         return this.items[i];
     }
+    // remove(i) {
+    //     this.items[i].detach();
+    //     this.items.splice(i, 1);
+    // }
 }
 
 class Arrow {
