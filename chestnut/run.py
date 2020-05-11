@@ -3,6 +3,8 @@ import sys, os, argparse
 parser = argparse.ArgumentParser(description = 'Run Chestnut Scripts for Kandan.')
 parser.add_argument('--single_query', type = int, default = -1,
         help = 'Run ILP on a single query (omit for all)')
+parser.add_argument('--queries', type = str,
+        help = 'Run ILP on a weighted subset of queries.')
 parser.add_argument('--scale', type = float, default = 0, # TODO?
         help = 'Data scale for TSV (optional).')
 parser.add_argument('--membound_factor', type = float, default = 1.7,
@@ -29,6 +31,7 @@ if not args.vvv:
 # Load kandan and run.
 from repo.benchmark.kandan import kandan
 kandan.run(single_query = args.single_query,
+    queries = args.queries,
     gen_tsv = True, gen_cpp = args.gen_cpp,
     membound_factor = args.membound_factor,
     run_test_read_overall = False, output = old_stdout)
