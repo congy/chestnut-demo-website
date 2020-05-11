@@ -128,7 +128,8 @@ function getSuitableParamValues(qpInfo, data) {
   const { header, rows } = data[qpInfo.output.type];
   const row = rows[(Math.random() * rows.length) | 0];
 
-  const stack = [ qpInfo.pred ];
+  const stack = [];
+  if (qpInfo.pred) stack.push(qpInfo.pred);
   while (stack.length) {
     const e = stack.pop(); 
     if ('BinOp' !== e.expr) {

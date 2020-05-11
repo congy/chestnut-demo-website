@@ -17,6 +17,6 @@ class DatalayoutController < ApplicationController
   end
 
   def show2
-    @customapp = Customapp.find_by_id(params[:id])
+    @customapp = Customapp.find_by_id(1)
   end
 end
