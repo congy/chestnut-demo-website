@@ -3,7 +3,8 @@
 <p>
 
 <%= form_for @customapp do |f| %>
-  <% @customapp.webpages.each do |webpage| %> 
+  <% @customapp.webpages.each do |webpage| %>
+    <% next if not webpage.included%> 
 		<div style="float:right; width: 400px">
 			<h2><b> <%= webpage.name %> </b></h2>
 			<br>

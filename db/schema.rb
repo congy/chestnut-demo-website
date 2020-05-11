@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20200312202357) do
+ActiveRecord::Schema.define(version: 20200511195722) do
 
   create_table "customapps", force: :cascade do |t|
     t.text "name"
@@ -18,6 +18,7 @@ ActiveRecord::Schema.define(version: 20200312202357) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "url"
+    t.float "mem_bound"
   end
 
   create_table "microposts", force: :cascade do |t|
@@ -35,6 +36,7 @@ ActiveRecord::Schema.define(version: 20200312202357) do
     t.integer "webpage_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "qid"
     t.index ["webpage_id"], name: "index_modelqueries_on_webpage_id"
   end
 
@@ -72,6 +74,8 @@ ActiveRecord::Schema.define(version: 20200312202357) do
     t.datetime "updated_at", null: false
     t.string "screenshot_filename"
     t.integer "custom_weight"
+    t.string "url"
+    t.boolean "included"
     t.index ["customapp_id"], name: "index_webpages_on_customapp_id"
   end
 

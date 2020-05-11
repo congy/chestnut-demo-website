@@ -7,14 +7,28 @@ class CnpyApiController < ApplicationController
     # TODO parse input, model of application and webpages.
     # TODO caching.
     
+    @customapp = Customapp.find_by_id(1)
+    queries = []
+    @customapp.webpages.each do |webpage|
+      next if not (webpage.custom_weight > 0 or webpage.weight > 0)
+      webpage.queries.each do |query|
+        queries << "(#{query.qid},#{webpage.custom_weight>0 ? webpage.custom_weight : webpage.weight})"
+      end
+    end
+   
+    puts ("queries = #{queries}") 
     # Argument parsing.
     args = [ '--scale', '0' ]
     unless params[:single_query].nil?
       args.push('--single_query', params[:single_query])
     end
-    unless params[:membound_factor].nil?
-      args.push('--membound_factor', params[:membound_factor])
-    end
+    #unless params[:membound_factor].nil?
+    #  args.push('--membound_factor', params[:membound_factor])
+    #end
+
+    args.push('--membound_factor', @customapp.mem_bound)
+    #args.push('--queries', queries.join(','))
+    puts ("args = #{args.inspect}")
 
     # Run chestnut python script
     poutput, pinfo = Open3.capture2('python3', 'chestnut/run.py', *args) # ...
