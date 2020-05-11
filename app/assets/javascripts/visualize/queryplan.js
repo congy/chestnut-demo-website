@@ -17,6 +17,7 @@ class PlanContext {
 
     // List of two-element "tuples", [ int indent depth, str ].
     this.output = [];
+    this.outputDeferred = [];
     // The current event depth.
     this.depth = 0;
 
@@ -41,6 +42,13 @@ class PlanContext {
   writeLine(line, extraIndent = 0) {
     this.localOutputs.push(this.output.length);
     this.output.push([ this.depth + extraIndent, line ]);
+  }
+  writeLineDeferred(line, extraIndent = 0) {
+    this.outputDeferred.push([ extraIndent, line ]);
+  }
+  writeDeferredLines() {
+    for (const [ extraIndent, line ] of this.outputDeferred)
+      this.writeLine(line, extraIndent);
   }
 
   static _varKey(v) {
@@ -211,8 +219,12 @@ function qpToSteps(step, context) {
       break;
     }
     case "ExecStepSeq": {
-      step.value.forEach(subStep => qpToSteps(subStep, context));
-      break;
+      let localContext = context;
+      for (const subStep of step.value) {
+        localContext = qpToSteps(subStep, localContext);
+      }
+      localContext.writeDeferredLines();
+      return localContext;
     }
     case "ExecScanStep": {
       // JSON representation.
@@ -289,10 +301,10 @@ function qpToSteps(step, context) {
 
         const newOutVar = localContext.makeAnonVar(`result_${step.value.var.type}`);
         localContext.writeLine(`${newOutVar}: ${step.value.var.type} = ${localContext.loopVar}.clone()`);
-        localContext.writeLine(`${localContext.outVar}.add_${step.value.var.type}(${newOutVar})`);
+        localContext.writeLineDeferred(`${localContext.outVar}.add_${step.value.var.type}(${newOutVar})`);
         localContext.outVar = newOutVar;
       }
-      break;
+      return localContext;
     }
     case "ExecSortStep": {
       const [ varToSort, isNew ] = context.getEnvVar(step.value.var);
