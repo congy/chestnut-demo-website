@@ -219,12 +219,11 @@ function qpToSteps(step, context) {
       break;
     }
     case "ExecStepSeq": {
-      let localContext = context;
       for (const subStep of step.value) {
-        localContext = qpToSteps(subStep, localContext);
+        context = qpToSteps(subStep, context);
       }
-      localContext.writeDeferredLines();
-      return localContext;
+      context.writeDeferredLines();
+      break;
     }
     case "ExecScanStep": {
       // JSON representation.
@@ -300,11 +299,12 @@ function qpToSteps(step, context) {
         if (step.value.var.init) throw Error(`Collection variable had init value: ${step.value.var.init}.`);
 
         const newOutVar = localContext.makeAnonVar(`result_${step.value.var.type}`);
-        localContext.writeLine(`${newOutVar}: ${step.value.var.type} = ${localContext.loopVar}.clone()`);
+        localContext.writeLine(`${newOutVar}: ${step.value.var.type} = ${localContext.loopVar}.get()`);
         localContext.writeLineDeferred(`${localContext.outVar}.add_${step.value.var.type}(${newOutVar})`);
         localContext.outVar = newOutVar;
       }
-      return localContext;
+      context = localContext;
+      break;
     }
     case "ExecSortStep": {
       const [ varToSort, isNew ] = context.getEnvVar(step.value.var);

@@ -30,6 +30,7 @@ class QueryPlanModel {
     // this.ARR.attach(svg);
     // console.error(this.ARR);
 
+    this.qpContext = qpContext;
     this.visContext = new VisContext(svg, qpVis, chestnutModel, delayFn, this.data);
     await qpExec(qpInfo.plan, qpContext, this.visContext);
   }
@@ -49,6 +50,9 @@ class VisContext {
 
     // Variable data during query exection. Changes whenever a variable changes.
     this.varDict = new Map();
+
+    // Deferred result pushes.
+    this.deferredResultPushes = [];
   }
 
   _getVar(name) {
@@ -90,10 +94,32 @@ class VisContext {
     const valVis = new VisElem(createTextEl(JSON.stringify(value)));
     this._setVar(name, valVis, value, true);
   }
+  setAtomVar(name, value) {
+    const oldData = this._getVar(name);
+    if (oldData) {
+      const { valVis, value: _oldValue } = oldData;
+      valVis.elem.textContent = JSON.stringify(value);
+      this._setVar(name, valVis, value, false);
+      valVis.reflow();
+    }
+    else {
+      const valVis = new VisElem(createTextEl(JSON.stringify(value)));
+      this._setVar(name, valVis, value, true);
+    }
+  }
+  incrementAtomVar(name) {
+    let { valVis, value } = this._getVar(name);
+    value++;
+    valVis.elem.textContent = JSON.stringify(value);
+    this._setVar(name, valVis, value, false);
+    valVis.reflow();
+  }
+
   createListVar(name) {
     // Can be a list of values (kinda like a BasicArray) or just a single value; both are handled as lists.
     const valVis = new VisStack([], false, 0);
     this._setVar(name, valVis, [], false);
+    return valVis;
   }
   // deleteVar(name) {
   //   const { valVis, nameAndVarVis, value } = this.getVar(name);
@@ -130,10 +156,36 @@ class VisContext {
 
     // TODO: Something here?
   }
+
+  deferPushToResultVar(listName, valName) {
+    this.deferredResultPushes.push([ listName, valName ]);
+  }
+
+  pushToResultVar(listName, valName) {
+    // TODO? How to determine which "row" inside the result to go in?
+    const { valVis: lValVis, value: lValue } = this.getVar(listName);
+    const { valVis: vValVis, value: vValue } = this.getVar(valName);
+
+    const item = vValVis.pop(); //[0].clone(this.svg);
+    if (0 === lValVis.items.length)
+      lValVis.push(item);
+    else {
+      const recordVis = lValVis.items[0];
+
+      // Hacky, which row?
+      let rowVis = recordVis.stack.items[1];
+      if (!rowVis) {
+        rowVis = new VisStack();
+        recordVis.push(rowVis);
+      }
+      rowVis.push(item);
+    }
+  }
 }
 
 // visContext = { svg, qpVis, chestnutModel, delayFn }
 async function qpExec(step, qpContext, visContext) {
+  let continu = true;
   const { svg, qpVis, chestnutModel, delayFn } = visContext;
 
   switch (step.type) {
@@ -142,7 +194,12 @@ async function qpExec(step, qpContext, visContext) {
       const outInfo = qpContext.qpInfo.output;
       const [ outName, isNew ] = qpContext.getEnvVar(outInfo);
       if (isNew) throw 'NEW VARIABLE CREATED!!'; // TODO REMOVE
-      visContext.createListVar(outName);
+
+      const outStack = visContext.createListVar(outName);
+      // Special for result variable: add an empty "result" record.
+      const resRec = new VisRecord('', color = '#CCC');
+      resRec.attach(visContext.svg, -100, 0);
+      outStack.push(resRec);
 
       const paramValues = getSuitableParamValues(qpContext.qpInfo, visContext.data);
 
@@ -160,10 +217,22 @@ async function qpExec(step, qpContext, visContext) {
       break;
     }
     case "ExecStepSeq": {
+      const initDefLen = visContext.deferredResultPushes.length;
+
+      let continu;
+      let localContext = qpContext;
       for (const subStep of step.value) {
-        await qpExec(subStep, qpContext, visContext);
+        [ continu, localContext ] = await qpExec(subStep, localContext, visContext);
+        if (!continu) break;
+        // await delayFn();
+      }
+      // Bad abstraction break.
+      while (visContext.deferredResultPushes.length > initDefLen) {
+        visContext.pushToResultVar(...visContext.deferredResultPushes.pop());
         await delayFn();
       }
+      // TODO delay?
+
       // // Clear locally scoped variables.
       // console.log(`Delete var: ${qpContext.loopVar}.`);
       // visContext.deleteVar(qpContext.loopVar);
@@ -185,7 +254,11 @@ async function qpExec(step, qpContext, visContext) {
         throw Error(`Chestnut model missing DS IDX ${idx}, ` +
         `available: ${Array.from(visContext.availDs.keys())}.`);
 
-      const loopContext = qpContext.subs[0];
+      const loopContext = qpContext.subs[0]; // TODO: actually needs to be nth.
+      if (!loopContext) {
+        console.error('Current context:', qpContext);
+        throw Error('Failed to get loop context.');
+      }
       const loopVar = loopContext.loopVar;
       console.log(`Loop context with loop var: ${loopVar} (out var: ${loopContext.outVar}).`);
       visContext.createListVar(loopVar);
@@ -224,8 +297,10 @@ async function qpExec(step, qpContext, visContext) {
         const { header, row } = visContext.getVarValue(qpContext.loopVar)[0]; // Get first/only val from list.
         const condEval = evalExpr(step.value.cond, header, row, { qpContext, visContext });
         console.log(`CONDITION: ${condEval}.`);
-        if (false === condEval) // No set if cond is false.
+        if (false === condEval) { // No set if cond is false.
+          continu = false;
           break;
+        }
 
         localContext = qpContext.subs[0];
       }
@@ -234,16 +309,12 @@ async function qpExec(step, qpContext, visContext) {
         // Value is an "atom", meaning several things:
         // - It is a single value (not a collection).
         // - It is not a output result.
-        throw 'TODO'; // TODO.
-        // const [ aVar, isNew ] = localContext.getEnvVar(step.value.var);
-        // if ('count()' == step.value.expr) {
-        //   if (isNew) throw Error('ExecSetVarStep with expr count() cannot be new.');
-        //   localContext.writeLine(`${aVar} += 1`)
-        // }
-        // else if (isNew)
-        //   localContext.writeLine(`${aVar}: ${step.value.var.type} = ${step.value.expr.value}`);
-        // else
-        //   localContext.writeLine(`${aVar} = ${step.value.expr.value}`);
+        const [ aVar, isNew ] = localContext.getEnvVar(step.value.var);
+        if ('count()' == step.value.expr) {
+          visContext.incrementAtomVar(aVar);
+        }
+        else
+          visContext.setAtomVar(aVar, JSON.parse(step.value.expr.value));
       }
       else {
         // Value is NOT an "atom", it is a collection (EnvCollectionVariable).
@@ -251,21 +322,22 @@ async function qpExec(step, qpContext, visContext) {
         // - ??
         if (step.value.var.init) throw Error(`Collection variable had init value: ${step.value.var.init}.`);
 
-        // Schema: qpContext.parent.loopVar .push( localContext.loopVar )
-        // Ignore outVar since it is temp for clones.
-        console.log('lc.lv', localContext.loopVar, 'lc.ov', localContext.outVar);
-        console.log('qpc.lv', qpContext.loopVar, 'qpc.ov', qpContext.outVar);
-        console.log('lc.p.lv', localContext.parent.loopVar, 'lc.p.ov', localContext.parent.outVar);
-        console.log('lc.p.p.ov', localContext.parent.parent.loopVar);
+        // // Schema: qpContext.parent.loopVar .push( localContext.loopVar )
+        // // Ignore outVar since it is temp for clones.
+        // console.warn('lc.lv', localContext.loopVar, 'lc.ov', localContext.outVar);
+        // console.warn('qpc.lv', qpContext.loopVar, 'qpc.ov', qpContext.outVar);
+        // console.warn('lc.p.lv', localContext.parent.loopVar, 'lc.p.ov', localContext.parent.outVar);
+        // console.warn('lc.p.p.ov', localContext.parent.parent.loopVar);
 
         const parentContext = localContext.parent;
         let targetVar = parentContext.outVar;
         if (!visContext.varExists(targetVar))
           targetVar = parentContext.loopVar;
 
-        visContext.pushToListVar(targetVar, localContext.loopVar);
+        //visContext.pushToListVar(targetVar, localContext.loopVar);
+        visContext.deferPushToResultVar(targetVar, localContext.loopVar);
       }
-
+      qpContext = localContext;
       // TODO
       break;
     }
@@ -278,6 +350,7 @@ async function qpExec(step, qpContext, visContext) {
       throw new Error(`Unknown: ${step.type} from ${step}.`);
     }
   }
+  return [ continu, qpContext ];
 }
 
 class VariableModel {

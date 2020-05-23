@@ -76,6 +76,6 @@ class VisualizerController {
 
         // TODO
         // Delay needs to match or be greater than css transition speed.
-        this.qpModel.form(qpInfo, qpContext, this.svg, this.qpVis, this.chestnutModel, () => delay(1000));
+        this.qpModel.form(qpInfo, qpContext, this.svg, this.qpVis, this.chestnutModel, () => delay(400));
     }
 }

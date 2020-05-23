@@ -311,6 +311,7 @@ class VisStack extends Vis {
             }
         }
 
+        // console.log(this.items, this.width, w, this.height, h);
         if (this.width === w && this.height === h)
             return false;
 
@@ -366,14 +367,16 @@ class VisStack extends Vis {
         this.detach();
         // Reset items.
         this.items = [];
+
         this.reflow(); // TODO could make this more efficient (?).
     }
     // TODO: clear() detaches but pop() does not.
     pop() {
-        if (!this.items.length) return;
-        const v = this.items.pop(); //.detach();
+        if (!this.items.length) return null;
+        const item = this.items.pop(); //.detach();
+        item.parent = null;
         this.reflow(); // TODO could make this more efficient (?).
-        return v;
+        return item;
     }
     get(i) {
         return this.items[i];
