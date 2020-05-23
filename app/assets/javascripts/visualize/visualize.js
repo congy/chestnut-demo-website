@@ -258,6 +258,57 @@ class VisRecord extends Vis {
     }
 }
 
+class VisSvg extends Vis {
+    constructor(item) {
+        super();
+        item.parent = this;
+
+        this.item = item;
+        this.svg = null;
+        this.width = 1200;
+        this.height = 500;
+    }
+    _update() {
+        this.svg.setAttribute('viewBox', `0 0 ${this.width} ${this.height}`);
+    }
+    reflow(_child) {
+        if (!this.svg)
+            throw Error('VisSvg must be attached before reflowing.');
+
+        const { width, height } = this.item.size();
+        // Only grow size of canvas, grow a bit extra to debounce.
+        let widthChanged = width >= this.width;
+        if (widthChanged)
+            this.width = width + 5;
+        if (height >= this.height)
+            this.height = height + 50;
+        else if (!widthChanged)
+            return;
+
+        this._update();
+    }
+    attach(svg) {
+        this.svg = svg;
+        this.item.attach(svg, 0, 0);
+        this._update();
+    }
+    move() {
+        throw Error('Cannot move VisSvg.');
+    }
+    size() {
+        return { width: this.width, height: this.height };
+    }
+    loc() {
+        return { x: 0, y: 0 };
+    }
+    detach() {
+        this.item.detach();
+    }
+    clone() {
+        throw Error('Cannot clone VisSvg.');
+    }
+}
+
 class VisStack extends Vis {
     constructor(items = [], isVert = false, pad = 0) {
         super();

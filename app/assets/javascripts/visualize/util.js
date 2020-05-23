@@ -156,7 +156,7 @@ function getSuitableParamValues(qpInfo, data) {
     if ('oid' === param.type || 'uint' === param.type)
       val = Number(val)
     else if ('like' === e.op) {
-      const words = val.split(/\s+/);
+      const words = val.split(/\W+/);
       val = words[(Math.random() * words.length) | 0];
     }
     out[param.symbol] = val;

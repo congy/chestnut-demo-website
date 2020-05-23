@@ -213,6 +213,7 @@ async function qpExec(step, qpContext, visContext) {
         visContext.createAtomVar(inpName, inpValue);
       }
 
+      await delayFn(2);
       await qpExec(step.value.steps, qpContext.subs[0], visContext);
       break;
     }

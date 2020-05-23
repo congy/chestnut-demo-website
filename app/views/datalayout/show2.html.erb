@@ -7,9 +7,9 @@
     }
     svg rect {
       transition:
-        transform 350ms cubic-bezier(0.47, 0, 0.745, 0.715),
-        width 300ms cubic-bezier(0.47, 0, 0.745, 0.715),
-        height 300ms cubic-bezier(0.47, 0, 0.745, 0.715);
+          transform 350ms cubic-bezier(0.47, 0, 0.745, 0.715),
+          width 300ms cubic-bezier(0.47, 0, 0.745, 0.715),
+          height 300ms cubic-bezier(0.47, 0, 0.745, 0.715);
     }
 
     .bigjson {
@@ -25,8 +25,9 @@
   </p>
 </div>
 <div class="column">
-  <svg viewBox="0 0 1060 2000" style="width: 1000px;"></svg>
+  <svg viewBox="0 0 500 500" style="width: 100%;"></svg>
 </div>
+<div id="buttons" class="column"></div>
 <div id="plans" class="column" style="white-space: pre-wrap; font-family: Consolas, monospace; line-height: 100%;">
 </div>
 <div class="column">
@@ -58,10 +59,10 @@
 
     await ctrl.play(ds);
     
-    // TODO
-    await delay(1000);
-    const i = 0; // TODO
-    await ctrl.playQp(qp[i], qpContexts[i]);
+    // // TODO
+    // await delay(1000);
+    // const i = 0; // TODO
+    // await ctrl.playQp(qp[i], qpContexts[i]);
   }
   function replay() {
     ctrl.draw();
@@ -69,6 +70,7 @@
     return false;
   }
   function handleQueryPlans({ ds, qp, data: _data }) {
+    const buttonsEl = document.getElementById('buttons');
     const plansEl = document.getElementById('plans');
     const qpContexts = [];
     let i = 0;
@@ -76,6 +78,13 @@
       const qpInfo = qp[i];
       const qpContext = qpToContext(qpInfo, ds);
       qpContexts.push(qpContext);
+
+      const a = document.createElement('a');
+      a.innerText = `Query ${qpInfo.qid}`;
+      a.href = '#';
+      a.onclick = () => { ctrl.playQp(qp[i], qpContext); return false; };
+      a.style.display = 'block';
+      buttonsEl.appendChild(a);
 
       const h1 = document.createElement('h1')
       h1.innerText = `${i} Query ${qpInfo.qid}, Plan ${qpInfo.pid}`;
