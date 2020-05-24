@@ -244,37 +244,37 @@ async function qpExec(step, qpContext, visContext) {
       let idx = step.value.idx;
       // If this is a ptr index we need to follow the pointer.
       // JSON datastructure representation.
-      const thisDs = qpContext.getDs(idx);
-      if ('Index' === thisDs.type && 'ptr' === thisDs.value.type)
-        idx = thisDs.value.target;
+      const leedDsModel = visContext.availDs.get(idx);
+      const leedDs = qpContext.getDs(idx);
+      if ('Index' === leedDs.type && 'ptr' === leedDs.value.type)
+        idx = leedDs.value.target;
 
       // Grab DS Model from **VIS** context.
-      const dsModel = visContext.availDs.get(idx);
+      const mainDsModel = visContext.availDs.get(idx);
       //const dsModel = visContext.chestnutModel.tlds.find(tlds => idx === tlds.id);
-      if (!dsModel)
+      if (!mainDsModel)
         throw Error(`Chestnut model missing DS IDX ${idx}, ` +
         `available: ${Array.from(visContext.availDs.keys())}.`);
 
-      const loopContext = qpContext.subs[0]; // TODO: actually needs to be nth.
-      if (!loopContext) {
-        console.error('Current context:', qpContext);
-        throw Error('Failed to get loop context.');
-      }
+      const loopContext = qpContext.subs[0];
+      if (!loopContext) throw Error('Failed to get loop context.');
+
       const loopVar = loopContext.loopVar;
       console.log(`Loop context with loop var: ${loopVar} (out var: ${loopContext.outVar}).`);
       visContext.createListVar(loopVar);
 
-      // // TODO: handle index bounds.
-      // if (step.value.exact) {
-
-      // }
-      // else if (step.value.lower) {
-        
-      // }
-      // else {}
-      for (let i = 0; i < dsModel.records.length; i++) {
-        const recordModel = dsModel.records[i];
+      for (let i = 0; i < leedDsModel.records.length; i++) {
+        const { recordId } = leedDsModel.records[i];
+        const recordModel = mainDsModel.records.find(rm => recordId === rm.recordId);
+        if (!recordModel) throw Error('Failed to find indexed record.');
         console.log(`Set loop var: ${loopVar} = ID ${recordModel.recordId}`);
+
+        if (leedDs.condition) {
+          const condEval = evalExpr(leedDs.condition, recordModel.header, recordModel.row, { qpContext, visContext });
+          console.log(`Index condition eval: ${condEval} (skipping if false).`);
+          // Skip if index condition is not met.
+          if (!condEval) continue;
+        }
 
         visContext.setListVar(loopVar, recordModel);
         await delayFn();
