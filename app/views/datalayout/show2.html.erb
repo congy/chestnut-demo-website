@@ -21,13 +21,16 @@
 <div class="row">
 <div class="column">
   <p>
-    Hello. Lorem Ipsum.
+    Chestnut Loading...
   </p>
 </div>
 <div class="column">
   <svg viewBox="0 0 500 500" style="width: 100%;"></svg>
 </div>
-<div id="buttons" class="column"></div>
+<div id="player" class="column" style="font-size: 300%;"></div>
+<div id="buttons" class="column">
+    <a id="clear" href="#">Clear</a>
+</div>
 <div id="plans" class="column" style="white-space: pre-wrap; font-family: Consolas, monospace; line-height: 100%;">
 </div>
 <div class="column">
@@ -35,74 +38,5 @@
   <p id="json" style="white-space: pre-wrap; font-family: Consolas, monospace; font-size: 0.8em; line-height: 100%;"></p>
 </div>
 <script type="text/javascript">
-  const xmlns = "http://www.w3.org/2000/svg";
-  async function get_model() {
-    const res = await fetch('/api/cnpy' + window.location.search, { method: 'post' });
-    let text = await res.text();
-    text = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-    return JSON.parse(text);
-  }
-  async function init() {
-    model_p = get_model();
-
-    window.svg = document.getElementsByTagName('svg')[0];
-    window.ctrl = new VisualizerController(svg);
-    
-    const model = await model_p;
-    const { ds, qp, data } = model;
-    ctrl.load(data);
-
-    ctrl.draw();
-    document.getElementById('json').innerText = JSON.stringify(model, null, 2);
-    const qpContexts = handleQueryPlans(model);
-    window.qpContexts = qpContexts; // TODO removeme
-
-    await ctrl.play(ds);
-    
-    // // TODO
-    // await delay(1000);
-    // const i = 0; // TODO
-    // await ctrl.playQp(qp[i], qpContexts[i]);
-  }
-  function replay() {
-    ctrl.draw();
-    let _ignored = ctrl.play(); // Returns promise.
-    return false;
-  }
-  function handleQueryPlans({ ds, qp, data: _data }) {
-    const buttonsEl = document.getElementById('buttons');
-    const plansEl = document.getElementById('plans');
-    const qpContexts = [];
-    let i = 0;
-    for (let i = 0; i < qp.length; i++) {
-      const qpInfo = qp[i];
-      const qpContext = qpToContext(qpInfo, ds);
-      qpContexts.push(qpContext);
-
-      const a = document.createElement('a');
-      a.innerText = `Query ${qpInfo.qid}`;
-      a.href = '#';
-      a.onclick = () => { ctrl.playQp(qp[i], qpContext); return false; };
-      a.style.display = 'block';
-      buttonsEl.appendChild(a);
-
-      const h1 = document.createElement('h1')
-      h1.innerText = `${i} Query ${qpInfo.qid}, Plan ${qpInfo.pid}`;
-      plans.appendChild(h1);
-
-      let pre = document.createElement('pre');
-      pre.className = 'prettyprint lang-py linenums';
-      pre.innerText = qpContext.toString();
-      plans.appendChild(pre);
-
-      pre = document.createElement('pre');
-      pre.className = 'prettyprint lang-json linenums bigjson';
-      pre.innerText = JSON.stringify(qpInfo, null, 2);
-      plans.appendChild(pre);
-    }
-    PR.prettyPrint();
-
-    return qpContexts;
-  }
   init();
 </script>

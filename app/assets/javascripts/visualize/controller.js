@@ -63,6 +63,9 @@ class VisualizerController {
                 new VisStack([ tocDiskVis, chestnutBox, this.qpVis ], true, 20));
         this.root.attach(svg);
     }
+    clearPlans() {
+        this.qpVis.clear();
+    }
     _makeAQpVis() {
         const aQpVis = new VisStack([ new VisElem(createTextEl('Query Execution')) ], true, 20);
         const qpBox = new VisBox(aQpVis, 'rgba(0, 0, 0, 0.05)', 20);
@@ -76,13 +79,16 @@ class VisualizerController {
         this.chestnutModel.bind(this.svg, this.allTableVis);
         await this.chestnutModel.form(this.svg, this.chestnutVis, () => Promise.resolve()); //delay(0)); // TODO set to 50.
     }
-    async playQp(qpInfo, qpContext) {
+    async playQp(qpInfo, qpContext, delayer = null) {
+        if (!delayer)
+            delayer = (s = 1) => delay(s * 400);
+
         this.qpModel = new QueryPlanModel(qpInfo, this.data);
         // this.qpModel.bind(this.svg, this.chestnutModel);
         // await this.qpModel.form(this.svg, this.qpVis, () => delay(100))
 
         // TODO
         // Delay needs to match or be greater than css transition speed.
-        this.qpModel.form(qpInfo, qpContext, this.svg, this._makeAQpVis(), this.chestnutModel, (s = 1) => delay(s * 400));
+        this.qpModel.form(qpInfo, qpContext, this.svg, this._makeAQpVis(), this.chestnutModel, delayer);
     }
 }

@@ -279,9 +279,9 @@ class VisSvg extends Vis {
         // Only grow size of canvas, grow a bit extra to debounce.
         let widthChanged = width >= this.width;
         if (widthChanged)
-            this.width = width + 5;
+            this.width = width + 10;
         if (height >= this.height)
-            this.height = height + 50;
+            this.height = height + 200;
         else if (!widthChanged)
             return;
 
