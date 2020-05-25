@@ -30,14 +30,36 @@ class QueryPlanModel {
     // this.ARR.attach(svg);
     // console.error(this.ARR);
 
+    const codemark = document.getElementById('codemark');
+    codemark.innerHTML = '';
+    const pre = document.createElement('pre');
+    pre.className = 'prettyprint lang-py linenums';
+    pre.innerText = qpContext.toString();
+    codemark.appendChild(pre);
+
+    PR.prettyPrint();
+
+    function markLinesFn(lines) {
+      const lis = pre.querySelectorAll('li');
+      for (let i = 0, j = 0; i < lis.length; i++) {
+        const li = lis[i];
+        if (lines[j] <= i) {
+          j++;
+          li.style['background-color'] = '#FFC';
+        }
+        else
+          li.style.removeProperty('background-color');
+      }
+    }
+
     this.qpContext = qpContext;
-    this.visContext = new VisContext(svg, qpVis, chestnutModel, delayFn, this.data);
+    this.visContext = new VisContext(svg, qpVis, chestnutModel, delayFn, this.data, markLinesFn);
     await qpExec(qpInfo.plan, qpContext, this.visContext);
   }
 }
 
 class VisContext {
-  constructor(svg, qpVis, chestnutModel, delayFn, data) {
+  constructor(svg, qpVis, chestnutModel, delayFn, data, markLinesFn) {
     this.svg = svg;
     this.qpVis = qpVis;
     this.chestnutModel = chestnutModel;
@@ -53,6 +75,8 @@ class VisContext {
 
     // Deferred result pushes.
     this.deferredResultPushes = [];
+
+    this.markLinesFn = markLinesFn;
   }
 
   _getVar(name) {
@@ -184,7 +208,9 @@ class VisContext {
 }
 
 // visContext = { svg, qpVis, chestnutModel, delayFn }
-async function qpExec(step, qpContext, visContext) {
+async function qpExec(step, qpContext, visContext) {  
+  visContext.markLinesFn(qpContext.localOutputs.get(step));
+
   let continu = true;
   const { svg, qpVis, chestnutModel, delayFn } = visContext;
 
@@ -230,7 +256,7 @@ async function qpExec(step, qpContext, visContext) {
       // Bad abstraction break.
       while (visContext.deferredResultPushes.length > initDefLen) {
         visContext.pushToResultVar(...visContext.deferredResultPushes.pop());
-        await delayFn();
+        await delayFn(2);
       }
       // TODO delay?
 
@@ -277,14 +303,14 @@ async function qpExec(step, qpContext, visContext) {
         }
 
         visContext.setListVar(loopVar, recordModel);
-        await delayFn();
 
         // Assign nested DS to visContext.
         for (const nested of recordModel.nested) {
           console.log('Set DS w/ ID: ' + nested.id);
           visContext.availDs.set(nested.id, nested);
         }
-
+      
+        await delayFn();
         await qpExec(step.value.steps, loopContext, visContext);
       }
 
@@ -339,7 +365,7 @@ async function qpExec(step, qpContext, visContext) {
         visContext.deferPushToResultVar(targetVar, localContext.loopVar);
       }
       qpContext = localContext;
-      // TODO
+      await delayFn();
       break;
     }
     case "ExecSortStep": {

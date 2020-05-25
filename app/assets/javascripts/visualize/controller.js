@@ -14,9 +14,9 @@ class VisualizerController {
         const data = this.data;
 
         // Remove anything existing.
-        while (svg.firstChild) {
-            svg.removeChild(svg.firstChild);
-        }
+        // while (svg.firstChild) {
+        //     svg.removeChild(svg.firstChild);
+        // }
         svg.innerHTML = `\
 <defs>
     <marker id="head" orient="auto" markerHeight="4" refX="3.5" refY="2" markerWidth="4">

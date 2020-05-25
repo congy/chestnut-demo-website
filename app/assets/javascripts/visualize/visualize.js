@@ -372,12 +372,8 @@ class VisStack extends Vis {
         return true;
     }
     reflow(child) {
-        if (this._update(this.items.indexOf(child))) {
+        if (this._update(this.items.indexOf(child)))
             this.reflowParent(this);
-            console.log('REFLOW PARENT');
-        }
-        else
-            console.log('NO REFLOW PARENT');
     }
     move(x, y, attachSvg = null) {
         if (this.x === x && this.y === y)

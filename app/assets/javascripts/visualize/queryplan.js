@@ -33,14 +33,19 @@ class PlanContext {
     // Name of the most recent output var.
     this.outVar = null;
 
-    // List of indices.
-    this.localOutputs = [];
+    // Map from step to list of indices.
+    this.localOutputs = new Map();
+    this._commandOutputs = [];
     // "Sub"-contexts.
     this.subs = [];
   }
 
+  markNextStep(step) {
+    this.localOutputs.set(step, (this._commandOutputs = []));
+  }
+
   writeLine(line, extraIndent = 0) {
-    this.localOutputs.push(this.output.length);
+    this._commandOutputs.push(this.output.length);
     this.output.push([ this.depth + extraIndent, line ]);
   }
   writeLineDeferred(line, extraIndent = 0) {
@@ -196,6 +201,7 @@ class PlanContext {
 }
 
 function qpToSteps(step, context) {
+  context.markNextStep(step);
   switch (step.type) {
     case "ExecQueryStep": {
       if (0 !== context.depth) throw Error(`ExecQueryStep not root step, found at depth ${context.depth}.`);
