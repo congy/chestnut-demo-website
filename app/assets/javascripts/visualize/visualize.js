@@ -45,12 +45,10 @@ class Vis {
         this.watchers = [];
     }
     setParent(parent) {
-        if (null === parent)
-            throw Error('set parent null.');
+        if (null === parent) throw Error('set parent null.');
         this.parent = parent;
     }
     reflowParent() {
-        // console.log(`reflow ${this.constructor.name} -> parent ${this.parent && this.parent.constructor.name}`);
         if (null !== this.parent)
             this.parent.reflow(this);
     }
@@ -130,7 +128,7 @@ class VisBox extends Vis {
 
         return true;
     }
-    reflow(child) {
+    reflow(_child) {
         if (this._update())
             this.reflowParent();
     }
@@ -200,7 +198,7 @@ class VisRecord extends Vis {
         this.x = null;
         this.y = null;
     }
-    reflow(child) {
+    reflow(_child) {
         let { width, height } = this.box.size();
 
         if (this.width === width && this.height === height)
@@ -261,11 +259,12 @@ class VisRecord extends Vis {
 class VisSvg extends Vis {
     constructor(item) {
         super();
-        item.parent = this;
+        item.setParent(this);
 
         this.item = item;
         this.svg = null;
-        this.width = 1200;
+        this.minWidth = 1200;
+        this.width = this.minWidth;
         this.height = 500;
     }
     _update() {
@@ -275,11 +274,13 @@ class VisSvg extends Vis {
         if (!this.svg)
             throw Error('VisSvg must be attached before reflowing.');
 
-        const { width, height } = this.item.size();
-        // Only grow size of canvas, grow a bit extra to debounce.
-        let widthChanged = width >= this.width;
+        let { width, height } = this.item.size();
+        // Only grow height of canvas, grow a bit extra to debounce.
+        // Grow and shrink width of canvas.
+        width = Math.max(this.minWidth, width + 10);
+        let widthChanged = (width >= this.width) || (width < this.width - 100);
         if (widthChanged)
-            this.width = width + 10;
+            this.width = width;
         if (height >= this.height)
             this.height = height + 200;
         else if (!widthChanged)
@@ -371,8 +372,12 @@ class VisStack extends Vis {
         return true;
     }
     reflow(child) {
-        if (this._update(this.items.indexOf(child)))
+        if (this._update(this.items.indexOf(child))) {
             this.reflowParent(this);
+            console.log('REFLOW PARENT');
+        }
+        else
+            console.log('NO REFLOW PARENT');
     }
     move(x, y, attachSvg = null) {
         if (this.x === x && this.y === y)

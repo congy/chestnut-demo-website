@@ -128,7 +128,7 @@ class Player {
     return (s = 1) => {
       if (!this.paused)
         return delay(s * d);
-      return new Promise((resolve, reject) => this.resolvers.push({ resolve, reject }));
+      return new Promise((resolve, reject) => this.resolvers.unshift({ resolve, reject }));
     };
   }
 }
