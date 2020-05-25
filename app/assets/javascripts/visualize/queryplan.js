@@ -313,9 +313,12 @@ function qpToSteps(step, context) {
       break;
     }
     case "ExecSortStep": {
-      const [ varToSort, isNew ] = context.getEnvVar(step.value.var);
-      //if (isNew) throw Error(`ExecSortStep cannot sort new variable: "${varToSort}".`);
-      context.writeLine(`sort(${varToSort} by ${step.value.order.map(o => o.field).join(', ')})`);
+      // const [ varToSort, isNew ] = context.getEnvVar(step.value.var);
+      // if (isNew) throw Error(`ExecSortStep cannot sort new variable: "${varToSort}".`);
+      // TODO: janky.
+      const parentVar = context.outVar;
+      const subVar = step.value.var.type;
+      context.writeLine(`sort(${parentVar}.${subVar} by ${step.value.order.map(o => o.field).join(', ')})`);
       break;
     }
     default: {

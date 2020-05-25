@@ -370,6 +370,13 @@ async function qpExec(step, qpContext, visContext) {
     }
     case "ExecSortStep": {
       // TODO
+      // const [ varToSort, isNew ] = context.getEnvVar(step.value.var);
+      // if (isNew) throw Error(`ExecSortStep cannot sort new variable: "${varToSort}".`);
+
+      // const value = visContext.getVarValue(varToSort);
+      // console.error(step, value);
+
+      // throw 'exec sort step not implemented';
       break;
     }
     default: {
