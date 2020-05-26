@@ -11,6 +11,8 @@ class PlanContext {
     // All available datastructures. Always includes the TLDS,
     // plus any additional nested datastructures encountered.
     this.availDs = availDs || new Map(tlds.map(ds => [ ds.id, ds ]));
+    // List of ids of used ds.
+    this.usedDsIds = new Set();
 
     // Parent PlanContext.
     this.parent = null;
@@ -103,6 +105,7 @@ class PlanContext {
 
   // Get actual DS json from ID. Only applies to in-scope.
   getDs(dsId) {
+    this.usedDsIds.add(dsId);
     return this.availDs.get(dsId);
   }
 
@@ -181,6 +184,8 @@ class PlanContext {
     this.subs.push(d);
 
     d.parent = this;
+
+    d.usedDsIds = this.usedDsIds;
 
     d.output = this.output;
     d.depth = this.depth + 1;

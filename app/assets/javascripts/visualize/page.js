@@ -15,12 +15,17 @@ async function init() {
   
   const model = await modelPromise;
   const { ds, qp, data } = model;
-  ctrl.load(data);
 
+  const { qpContexts, allUsedDsIds } = handleQueryPlans(model);
+  window.qpContexts = qpContexts; // TODO removeme
+
+  const pruned = [];
+  const dsFilt = removeUnusedDs(ds, allUsedDsIds, pruned);
+  console.log(`Pruned ${new Set(pruned).size} DSes in ${pruned.length} locations:`, pruned);
+
+  ctrl.load(data);
   ctrl.draw();
   document.getElementById('json').innerText = JSON.stringify(model, null, 2);
-  const qpContexts = handleQueryPlans(model);
-  window.qpContexts = qpContexts; // TODO removeme
 
   const playerEl = document.getElementById('player');
   window.player = new Player(playerEl);
@@ -31,7 +36,7 @@ async function init() {
     return false;
   }
 
-  await ctrl.play(ds);
+  await ctrl.play(dsFilt);
   
   // // TODO
   // await delay(1000);
@@ -49,11 +54,15 @@ function handleQueryPlans({ ds, qp, data: _data }) {
   const buttonsEl = document.getElementById('buttons');
   const plansEl = document.getElementById('plans');
   const qpContexts = [];
+  const allUsedDsIds = new Set();
+
   let i = 0;
   for (let i = 0; i < qp.length; i++) {
     const qpInfo = qp[i];
     const qpContext = qpToContext(qpInfo, ds);
     qpContexts.push(qpContext);
+
+    qpContext.usedDsIds.forEach(dsId => allUsedDsIds.add(dsId));
 
     const a = document.createElement('a');
     a.innerText = `Query ${qpInfo.qid}`;
@@ -78,7 +87,19 @@ function handleQueryPlans({ ds, qp, data: _data }) {
   }
   PR.prettyPrint();
 
-  return qpContexts;
+  return { qpContexts, allUsedDsIds };
+}
+
+function removeUnusedDs(ds, allUsedDsIds, pruned = []) {
+  return ds.filter(d => {
+    if (!allUsedDsIds.has(d.id)) {
+      pruned.push(d.id);
+      return false;
+    }
+    if (d.value.nested)
+      d.value.nested = removeUnusedDs(d.value.nested, allUsedDsIds, pruned);
+    return true;
+  });
 }
 
 const CHAR_PLAY  = '\u25B6';
