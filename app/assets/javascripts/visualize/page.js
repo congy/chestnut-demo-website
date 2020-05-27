@@ -20,7 +20,7 @@ async function init() {
   window.qpContexts = qpContexts; // TODO removeme
 
   const pruned = [];
-  const dsFilt = removeUnusedDs(ds, allUsedDsIds, pruned);
+  const dsFilt = preprocessDs(ds, allUsedDsIds, pruned);
   console.log(`Pruned ${new Set(pruned).size} DSes in ${pruned.length} locations:`, pruned);
 
   ctrl.load(data);
@@ -90,16 +90,31 @@ function handleQueryPlans({ ds, qp, data: _data }) {
   return { qpContexts, allUsedDsIds };
 }
 
-function removeUnusedDs(ds, allUsedDsIds, pruned = []) {
-  return ds.filter(d => {
-    if (!allUsedDsIds.has(d.id)) {
-      pruned.push(d.id);
-      return false;
-    }
-    if (d.value.nested)
-      d.value.nested = removeUnusedDs(d.value.nested, allUsedDsIds, pruned);
-    return true;
-  });
+// Removes unused DSes and sorts so indexes come before the BasicArray they point at.
+function preprocessDs(ds, allUsedDsIds, pruned = []) {
+  return ds
+    .filter(d => {
+      if (!allUsedDsIds.has(d.id)) {
+        pruned.push(d.id);
+        return false;
+      }
+      if (d.value.nested)
+        d.value.nested = preprocessDs(d.value.nested, allUsedDsIds, pruned);
+      return true;
+    })
+    // Sorts in-place but returns self.
+    .sort((a, b) => {
+      let aval = a.id;
+      let bval = b.id;
+
+      // -0.5 positions indices before their target DS.
+      if ('ptr' === a.value.type)
+        aval = a.value.target - 0.5;
+      if ('ptr' === b.value.type)
+        bval = b.value.target - 0.5;
+
+      return (aval - bval) || (a.id - b.id);
+    });
 }
 
 const CHAR_PLAY  = '\u25B6';
