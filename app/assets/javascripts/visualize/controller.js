@@ -24,6 +24,25 @@ class VisualizerController {
     </marker>
 </defs>`;
 
+        // One-letter abbreviations.
+        const tableAbrv = {};
+        (() => {
+            const abrvs = new Set();
+            outer:
+            for (const table of Object.keys(data)) {
+                for (let i = 0; i < table.length; i++) {
+                    const letter = table[i].toUpperCase();
+                    if (!abrvs.has(letter)) {
+                        abrvs.add(letter)
+                        tableAbrv[table] = letter;
+                        continue outer;
+                    }
+                }
+                // Default: use full table name.
+                tableLetters[table] = table;
+            }
+        })();
+
         // Build tables.
         const allTableVis = this.allTableVis = {};
         for (const [ table, { header, rows } ] of Object.entries(data)) {
@@ -32,7 +51,7 @@ class VisualizerController {
 
             const allRecordVis = [];
             for (const row of rows) {
-                const recordVis = new VisRecord(table.slice(0, 1).toUpperCase() + row[idIndex], color, { table, row });
+                const recordVis = new VisRecord(tableAbrv[table] + row[idIndex], color, { table, row });
                 allRecordVis.push(recordVis);
             }
 
@@ -42,7 +61,8 @@ class VisualizerController {
 
         // Table of Contents.
         const toc = getColorTable();
-        const tocItems = Object.entries(toc).map(([ tableName, color ]) => new VisRecord(`${tableName} (${tableName.slice(0, 1).toUpperCase()})`, color));
+        const tocItems = Object.entries(toc)
+            .map(([ tableName, color ]) => new VisRecord(`${tableName} (${tableAbrv[tableName]})`, color));
         const tocVis = new VisStack([ new VisElem(createTextEl('Tables (On Disk)')), ...tocItems ], true, 20);
         const tocBox = new VisBox(tocVis, 'rgba(0, 0, 0, 0.05)', 20);
 
