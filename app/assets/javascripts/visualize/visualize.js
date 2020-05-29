@@ -311,7 +311,7 @@ class VisSvg extends Vis {
 }
 
 class VisStack extends Vis {
-    constructor(items = [], isVert = false, pad = 0) {
+    constructor(items = [], isVert = false, pad = 0, itemMinSize = 0) {
         super();
 
         this.items = items;
@@ -321,6 +321,8 @@ class VisStack extends Vis {
         this.width = 0;
         this.height = 0;
         this.isVert = isVert;
+
+        this.itemMinSize = itemMinSize;
 
         this.x = null;
         this.y = null;
@@ -339,14 +341,18 @@ class VisStack extends Vis {
                     item.attach(attachSvg, x, y);
                 else if (i > triggerIndex)
                     item.move(x, y);
-                const { width, height } = item.size();
+                let { width, height } = item.size();
 
                 if (this.isVert) {
+                    if (height < this.itemMinSize)
+                        height = this.itemMinSize;
                     w = Math.max(w, width);
                     h += height + this.pad;
                     y += height + this.pad;
                 }
                 else {
+                    if (width < this.itemMinSize)
+                        width = this.itemMinSize;
                     h = Math.max(h, height);
                     w += width + this.pad;
                     x += width + this.pad;

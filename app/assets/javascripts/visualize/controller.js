@@ -63,13 +63,10 @@ class VisualizerController {
         const toc = getColorTable();
         const tocItems = Object.entries(toc)
             .map(([ tableName, color ]) => new VisRecord(`${tableName} (${tableAbrv[tableName]})`, color));
-        const tocVis = new VisStack([ new VisElem(createTextEl('Tables (On Disk)')), ...tocItems ], true, 20);
-        const tocBox = new VisBox(tocVis, 'rgba(0, 0, 0, 0.05)', 20);
 
-        const diskVis = new VisStack([ new VisElem(createTextEl('Records')), ...Object.values(allTableVis) ], true, 20);
-        const diskBox = new VisBox(diskVis, 'rgba(0, 0, 0, 0.05)', 20); // TODO find out color order.
-
-        const tocDiskVis = new VisStack([ tocBox, diskBox ], false, -1);
+        const tocDiskRows = Object.values(allTableVis).map((disk, i) => new VisStack([ tocItems[i], disk ], false, 20, 120));
+        const tocDiskVis = new VisStack([ new VisElem(createTextEl('Tables (On Disk)')), ...tocDiskRows ], true, 20);
+        const tocDiskBox = new VisBox(tocDiskVis, 'rgba(0, 0, 0, 0.05)', 20);
 
         const chestnutVis = new VisStack([ new VisElem(createTextEl('Chestnut (In-Memory)')) ], true, 20);
         const chestnutBox = new VisBox(chestnutVis, 'rgba(0, 0, 0, 0.05)', 20); // TODO find out color order.
@@ -80,7 +77,7 @@ class VisualizerController {
         // QUERY VIS END
 
         this.root = new VisSvg(
-                new VisStack([ tocDiskVis, chestnutBox, this.qpVis ], true, 20));
+                new VisStack([ tocDiskBox, chestnutBox, this.qpVis ], true, 20));
         this.root.attach(svg);
     }
     clearPlans() {
