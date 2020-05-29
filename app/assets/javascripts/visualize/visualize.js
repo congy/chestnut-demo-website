@@ -258,18 +258,21 @@ class VisRecord extends Vis {
 }
 
 class VisSvg extends Vis {
-    constructor(item) {
+    constructor(item, onResize = () => {}) {
         super();
         item.setParent(this);
 
         this.item = item;
         this.svg = null;
-        this.minWidth = 1200;
+        this.minWidth = 800;
         this.width = this.minWidth;
         this.height = 500;
+
+        this.onResize = onResize;
     }
     _update() {
         this.svg.setAttribute('viewBox', `0 0 ${this.width} ${this.height}`);
+        this.onResize(this.width, this.height);
     }
     reflow(_child) {
         if (!this.svg)
@@ -283,7 +286,7 @@ class VisSvg extends Vis {
         if (widthChanged)
             this.width = width;
         if (height >= this.height)
-            this.height = height + 200;
+            this.height = height + 100;
         else if (!widthChanged)
             return;
 

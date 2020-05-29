@@ -10,6 +10,8 @@ class VisualizerController {
         this.data = data; //json;
     }
     draw() {
+        document.getElementById('loading').remove();
+
         const svg = this.svg;
         const data = this.data;
 
@@ -77,7 +79,8 @@ class VisualizerController {
         // QUERY VIS END
 
         this.root = new VisSvg(
-                new VisStack([ tocDiskBox, chestnutBox, this.qpVis ], true, 20));
+                new VisStack([ tocDiskBox, chestnutBox, this.qpVis ], true, 20),
+                (width, height) => document.getElementById('spacer').style.height = `calc(${100 * height / width / 2}vw - 250px)`);
         this.root.attach(svg);
     }
     clearPlans() {

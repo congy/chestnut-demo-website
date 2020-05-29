@@ -3,13 +3,13 @@
   <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
   <style>
     svg * {
-      transition: transform 350ms cubic-bezier(0.47, 0, 0.745, 0.715);
+      transition: transform 350ms cubic-bezier(.86,.04,.83,.67);
     }
     svg rect {
       transition:
-          transform 350ms cubic-bezier(0.47, 0, 0.745, 0.715),
-          width 300ms cubic-bezier(0.47, 0, 0.745, 0.715),
-          height 300ms cubic-bezier(0.47, 0, 0.745, 0.715);
+          transform 350ms cubic-bezier(.86,.04,.83,.67),
+          width 300ms cubic-bezier(.86,.04,.83,.67),
+          height 300ms cubic-bezier(.86,.04,.83,.67);
     }
 
     .bigjson {
@@ -18,22 +18,28 @@
   </style>
 <% end %>
 <h1>App 1</h1>
-<div class="row">
-<div class="column">
-  <p>
-    Chestnut Loading...
-  </p>
+<p id="loading">
+  Loading...
+</p>
+<div class="container-fluid" style="width: 98vw; margin: 0 calc((100% - 98vw) / 2);">
+  <div class="row">
+    <div class="col-md-6 col-sm-8">
+      <div>
+        <svg viewBox="0 0 500 500" style="width: 100%;"></svg>
+      </div>
+      <div id="player" style="font-size: 300%;"></div>
+      <div id="buttons">
+          <a id="clear" href="#">Clear</a>
+      </div>
+    </div>
+    <div class="col-md-6 col-sm-4">
+      <div id="spacer"></div>
+      <div id="codemark"></div>
+    </div>
+  </div>
 </div>
-<div class="column">
-  <svg viewBox="0 0 500 500" style="width: 100%;"></svg>
-</div>
-<div id="player" class="column" style="font-size: 300%;"></div>
-<div id="buttons" class="column">
-    <a id="clear" href="#">Clear</a>
-</div>
-<div id="codemark"></div>
-<div id="plans" class="column" style="white-space: pre-wrap; font-family: Consolas, monospace; line-height: 100%;"></div>
-<div class="column">
+<div id="plans" style="white-space: pre-wrap; font-family: Consolas, monospace; line-height: 100%;"></div>
+<div style="overflow-x: scroll;">
   <hr />
   <p id="json" style="white-space: pre-wrap; font-family: Consolas, monospace; font-size: 0.8em; line-height: 100%;"></p>
 </div>
