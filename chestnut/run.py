@@ -32,7 +32,7 @@ if not args.vvv:
 from repo.benchmark.kandan import kandan
 kandan.run(single_query = args.single_query,
     queries = args.queries,
-    gen_tsv = True, gen_cpp = args.gen_cpp,
+    gen_tsv = False, gen_cpp = args.gen_cpp,
     membound_factor = args.membound_factor,
     run_test_read_overall = False, output = old_stdout)
 
