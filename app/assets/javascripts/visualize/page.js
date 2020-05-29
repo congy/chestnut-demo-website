@@ -36,6 +36,7 @@ async function init() {
     return false;
   }
 
+  await window.player.getDelayer(0)();
   await ctrl.play(dsFilt);
   
   // // TODO
@@ -44,11 +45,11 @@ async function init() {
   // await ctrl.playQp(qp[i], qpContexts[i]);
 }
 
-function replay() {
-  ctrl.draw();
-  let _ignoredPromise = ctrl.play();
-  return false;
-}
+// function replay() {
+//   ctrl.draw();
+//   let _ignoredPromise = ctrl.play();
+//   return false;
+// }
 
 function handleQueryPlans({ ds, qp, data: _data }) {
   const buttonsEl = document.getElementById('buttons');

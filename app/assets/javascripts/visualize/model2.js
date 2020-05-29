@@ -27,6 +27,7 @@ class ChestnutModel {
             makeLabel(svg, dsModel, labelRow);
             chestnutVis.push(labelRow);
 
+            await delayFn();
             await ds.form(svg, labelRow, delayFn);
         }
     }
