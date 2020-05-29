@@ -112,11 +112,9 @@ class PlanContext {
   // Get var name for a datastructure ID.
   getDsVar(dsId, pref = null) {
     const key = `ds#${dsId}`;
-    if (!pref) {
-      const ds = this.getDs(dsId);
-      // .slice(-1) to get last, deepest nested table type.
-      pref = `${ds.type.toLowerCase()}_${ds.tableType}_${dsId}`;
-    }
+    if (!pref)
+      pref = dsVarName(this.getDs(dsId));
+
     return this._getVar(key, pref);
   }
 

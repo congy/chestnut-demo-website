@@ -6,8 +6,10 @@ const delay = (d) => new Promise(resolve => setTimeout(resolve, d));
 
 
 function moveEl(el, x, y) {
-    if (typeof x !== 'number' || typeof y !== 'number')
-        throw Error('x, y must be numeric.');
+    if (typeof x !== 'number' || typeof y !== 'number') {
+        console.warn(`Warning: x, y should be numeric, actual: ${x}, ${y}.`);
+        return;
+    }
     //el.setAttribute('transform', `translate(${x}, ${y})`);
     el.setAttribute('style', `transform: translate(${x}px, ${y}px)`);
 }
@@ -175,7 +177,6 @@ class VisBox extends Vis {
 const vrPad = 5;
 const vrSpacing = 5;
 class VisRecord extends Vis {
-
     constructor(label, color = 'rgba(255, 0, 0, 0.1)', data = null, boxDotted = false) {
         super();
         this.label = label;

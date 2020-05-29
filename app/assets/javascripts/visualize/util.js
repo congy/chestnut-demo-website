@@ -286,3 +286,11 @@ function getNestedRows(data, model, header, row, nestedModel) {
   return nestedAllRows;
   throw Error(`Failed to join: ${tableName}: ${header}, nested ${nestedName}: ${nestedHeader}.`);
 }
+
+const dsShortNames = {
+  'BasicArray': 'arr',
+  'Index': 'idx',
+}
+function dsVarName(ds) {
+  return `${dsShortNames[ds.type]}_${ds.tableType}_${ds.id}`;
+}

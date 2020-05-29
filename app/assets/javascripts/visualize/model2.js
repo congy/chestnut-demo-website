@@ -4,8 +4,9 @@
 class ChestnutModel {
     constructor(model, data) {
         // Top level data structures.
+        this.model = model;
         this.tlds = model.map(x => {
-            const { _header, rows } = data[x.tableType];
+            const { header: _header, rows } = data[x.tableType];
             return getDS(x, data, rows);
         });
     }
@@ -15,11 +16,50 @@ class ChestnutModel {
     }
     // Form items into new DS.
     async form(svg, chestnutVis, delayFn) {
-        for (const ds of this.tlds) {
+        for (let i = 0; i < this.tlds.length; i++) {
+            const ds = this.tlds[i];
+            const dsModel = this.model[i];
+
             await delayFn();
-            await ds.form(svg, chestnutVis, delayFn);
+
+            const labelRow = new VisStack([], false, 20, 220);
+            labelRow.attach(svg, -100, 100);
+            makeLabel(svg, dsModel, labelRow);
+            chestnutVis.push(labelRow);
+
+            await ds.form(svg, labelRow, delayFn);
         }
     }
+}
+
+function makeLabel(svg, model, parentVis) {
+    let text = dsVarName(model);
+
+    const sortFields = [];
+    for (const { key } of (model.keys || [])) {
+        if ('QueryField' === key.expr)
+            sortFields.push(key.field);
+        else if ('AssocOp' === key.expr) {
+            if ('QueryField' !== key.rh.expr || 'id' !== key.rh.field) throw Error(`Unexpected AssocOp RH: ${key.rh.expr}.`);
+            if ('QueryField' !== key.lh.expr) throw Error(`Unexpected AssocOp LH: ${key.lh.expr}.`);
+            sortFields.push(key.lh.field + '_id');
+        }
+        else
+            throw Error(`Unexpected expr: ${key.expr}.`);
+    }
+    if (sortFields.length) {
+        text += ` (${sortFields.join(', ')})`;
+        // const el = new VisElem(createTextEl(`(${sortFields.join(', ')})`));
+        // el.attach(svg, -100, 100);
+        // label.push(el);
+    }
+
+    const label = new VisRecord(text, getColorFromTable(model.tableType));
+    label.attach(svg, -100, 100);
+    parentVis.push(label);
+
+    for (const nestedModel of (model.value && model.value.nested || []))
+        makeLabel(svg, nestedModel, label);
 }
 
 function getDS(model, data, rows, parentTableName = null) {
@@ -45,7 +85,7 @@ class DS {
         this.condition = model.condition;
         this.conditionStr = model.condition_str;
 
-        let { header, rows: allRows } = data[this.table];
+        let { header, rows: _allRows } = data[this.table];
         this.rows = getRowSubsetByCondition({ header, rows }, model.condition);
         if ('Index' === model.type)
             sortIndexRows({ header, rows: this.rows }, model.keys);
@@ -53,18 +93,19 @@ class DS {
         console.log(`${model.id}: ${this.type}[${this.path}]: ${this.rows.length}/${data[this.table].rows.length} rows.`);
 
         this.records = this.rows.map(row => new Record(model, data, row, parentTableName));
+
+        this.dsVis = new VisStack();
+        //dsVis.attach(svg, 0, 0); // Doesn't really matter where/if it is attached.
     }
     bind(svg, allTableVis) {
         this.records.map(record => record.bind(svg, allTableVis));
     }
     async form(svg, chestnutVis, delayFn) {
-        const dsVis = new VisStack();
-        //dsVis.attach(svg, 0, 0); // Doesn't really matter where it is attached.
-        chestnutVis.push(dsVis);
+        chestnutVis.push(this.dsVis);
 
         for (const record of this.records) {
             await delayFn();
-            await record.form(svg, dsVis, delayFn);
+            await record.form(svg, this.dsVis, delayFn);
         }
     }
 }

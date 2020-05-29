@@ -94,7 +94,7 @@ class VisualizerController {
     async play(model) {
         this.chestnutModel = new ChestnutModel(model, this.data);
         this.chestnutModel.bind(this.svg, this.allTableVis);
-        await this.chestnutModel.form(this.svg, this.chestnutVis, () => Promise.resolve()); //delay(0)); // TODO set to 50.
+        await this.chestnutModel.form(this.svg, this.chestnutVis, () => delay(50));
     }
     async playQp(qpInfo, qpContext, delayer = null) {
         if (!delayer)
