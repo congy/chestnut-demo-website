@@ -14,6 +14,7 @@ async function init() {
   window.ctrl = new VisualizerController(svg);
   
   const model = await modelPromise;
+  document.getElementById('json').innerText = JSON.stringify(model, null, 2);
   const { ds, qp, data } = model;
 
   const { qpContexts, allUsedDsIds } = handleQueryPlans(model);
@@ -25,7 +26,6 @@ async function init() {
 
   ctrl.load(data);
   ctrl.draw();
-  document.getElementById('json').innerText = JSON.stringify(model, null, 2);
 
   const playerEl = document.getElementById('player');
   window.player = new Player(playerEl);

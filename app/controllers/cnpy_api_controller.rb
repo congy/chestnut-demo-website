@@ -18,7 +18,7 @@ class CnpyApiController < ApplicationController
    
     puts ("queries = #{queries}") 
     # Argument parsing.
-    args = [ '--scale', '1.0' ]
+    args = [ '--scale', '10.0' ]
     unless params[:single_query].nil?
       args.push('--single_query', params[:single_query])
     end
@@ -28,7 +28,7 @@ class CnpyApiController < ApplicationController
 
     args.push('--membound_factor', "#{@customapp.mem_bound}")
     args.push('--queries', queries.join('|'))
-    args.push('--queries',"(q_ai_1,1)|(q_ai_2,1)|(q_ai_3,1)|(q_as_1,1)|(q_ti_1,1)|(q_ci_1,1)|(q_cs_1,1)|(q_ms_1,1)")
+    # args.push('--queries',"(q_ai_1,1)|(q_ai_2,1)|(q_ai_3,1)|(q_as_1,1)|(q_di_1,1)|(q_ti_1,1)|(q_ci_1,1)|(q_cs_1,1)|(q_ms_1,1)")
     puts ("args = #{args.inspect}")
 
     # Run chestnut python script

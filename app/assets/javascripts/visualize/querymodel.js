@@ -365,7 +365,7 @@ async function qpExec(step, qpContext, visContext) {
         visContext.deferPushToResultVar(targetVar, localContext.loopVar);
       }
       qpContext = localContext;
-      await delayFn();
+      //await delayFn();
       break;
     }
     case "ExecSortStep": {

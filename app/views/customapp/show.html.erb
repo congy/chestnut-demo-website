@@ -6,28 +6,26 @@
   <% @customapp.webpages.each do |webpage| %>
     <% next if not webpage.included%> 
 		<div style="float:right; width: 400px">
-			<h2><b> <%= webpage.name %> </b></h2>
-			<br>
+			<h2><%= webpage.name %></h2>
 			<% webpage.queries.each_with_index do |query, index| %>
-				<b>Query <%= (index+1) %>: </b>
-				<% query.query.split('#').each_with_index do |queryline, index| %>
-					<% if index == 0 %>
-						<%= queryline %>
-					<% else %>
-						&nbsp; &nbsp; &nbsp; <%= queryline %>
+				<h4>Query <%= (index+1) %>: </h4>
+				<p style="font-family: Consolas, monospace; font-size: 0.8em; line-height: 100%;">
+					<% query.query.split('#').each_with_index do |queryline, index| %>
+						<% if index == 0 %>
+							<%= queryline %>
+						<% else %>
+							&nbsp;&nbsp;&nbsp;&nbsp;<%= queryline %>
+						<% end %>
+						<br>
 					<% end %>
-					<br>
-				<% end %>
+				</p>
 			<% end %>
-			<br>
-			<b>Query weight: </b> <%= webpage.custom_weight==0 ? webpage.weight : webpage.custom_weight %>
-			<br>
-			<br>
+			<h4>Query weight: <%= webpage.custom_weight == 0 ? webpage.weight : webpage.custom_weight %></h4>
 			<%= f.fields_for "webpages[]", webpage do |pf| %>
-				<b>Choose page weight:</b><br />
-				<%= pf.radio_button :weight, '0' %> 0 <br />
-				<%= pf.radio_button :weight, '1' %> 1 <br />
-				<%= pf.radio_button :weight, '10' %> 10 <br />
+				<h4>Choose page weight:</h4>
+				<div><%= pf.radio_button :weight, '0',  :style=>"width: 20px;" %>0</div>
+				<div><%= pf.radio_button :weight, '1',  :style=>"width: 20px;" %>1</div>
+				<div><%= pf.radio_button :weight, '10', :style=>"width: 20px;" %>10</div>
 				<b>Or manually input a page weight:</b>
       		<%= pf.text_field :custom_weight, size: 10 %> <br />
 				<button class="btn btn-info" type="submit">Save</button>

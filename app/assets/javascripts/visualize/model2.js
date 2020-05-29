@@ -143,8 +143,8 @@ class Record {
                 return getDS(nestedModel, data, nestedRows, this.table);
             });
 
-        // Make pointer index dotted.
-        this.dotted = 'Index' === model.type && 'ptr' === model.value.type;
+        // Make pointer DSes dotted.
+        this.dotted = 'ptr' === model.value.type;
     }
     bind(svg, allTableVis) {
         const tableVis = allTableVis[this.table];

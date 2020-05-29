@@ -242,7 +242,7 @@ function qpToSteps(step, context) {
       // Get nested datastructures.
       let targetDs = thisDs;
       // If this is a ptr index we need to follow the pointer.
-      if ('Index' === thisDs.type && 'ptr' === thisDs.value.type) {
+      if ('ptr' === thisDs.value.type) {
         targetDs = context.getDs(thisDs.value.target);
         if (!targetDs) throw Error(`Context missing Index target IDX ${thisDs.value.target}`);
       }
