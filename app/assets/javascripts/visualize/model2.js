@@ -75,7 +75,7 @@ function makeLabel(svg, model, parentVis, labelDict = {}) {
         else
             throw Error(`Unexpected expr: ${key.expr}.`);
     }
-    const columns = sortFields.length ? `Columns: ${sortFields.join(', ')}` : null;
+    const columns = sortFields.length ? `Index key: ${sortFields.join(', ')}` : null;
     const predicate = model.condition && `Predicate: ${stringifyPredicate(model.condition)}`;
 
     const dotted = 'ptr' === model.value.type;
