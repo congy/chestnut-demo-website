@@ -246,11 +246,11 @@ async function qpExec(step, qpContext, visContext) {
     case "ExecStepSeq": {
       const initDefLen = visContext.deferredResultPushes.length;
 
-      let continu;
+      let localContinue;
       let localContext = qpContext;
       for (const subStep of step.value) {
-        [ continu, localContext ] = await qpExec(subStep, localContext, visContext);
-        if (!continu) break;
+        ({ continu: localContinue, qpContext: localContext } = await qpExec(subStep, localContext, visContext));
+        if (!localContinue) break;
         // await delayFn();
       }
       // Bad abstraction break.
@@ -389,7 +389,7 @@ async function qpExec(step, qpContext, visContext) {
       throw new Error(`Unknown: ${step.type} from ${step}.`);
     }
   }
-  return [ continu, qpContext ];
+  return { continu, qpContext };
 }
 
 class VariableModel {
