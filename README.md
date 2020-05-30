@@ -1,3 +1,13 @@
+# Chestnut Demo
+
+## Setup DB
+```
+bundle exec rake db:create
+bundle exec rake db:migrate
+sqlite3 db/development.sqlite3
+.read init_db.sql
+.exit
+```
 
 # This is forked from [Ruby on Rails sample app](https://github.com/codefresh-contrib/ruby-on-rails-sample-app).
 
