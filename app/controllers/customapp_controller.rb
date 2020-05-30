@@ -8,6 +8,13 @@ class CustomappController < ApplicationController
   def update
     @customapp = Customapp.find_by_id(params[:id])
 	  puts "Customapp param = #{params[:customapp].inspect}"
+		eval_setting =  params[:customapp][:eval_setting][:eval_setting].to_i
+		if ![1, 2, 3].include?params[:customapp][:eval_setting][:eval_setting].to_i
+			eval_setting = nil
+		end
+		@customapp.mem_bound = params[:customapp][:mem_bound][:mem_bound].to_f
+		@customapp.eval_setting = eval_setting
+		@customapp.save!
 	  params[:customapp][:webpages].each do |wid, attrib|
         @page = Webpage.find_by_id(wid)
 		attrib.permit!

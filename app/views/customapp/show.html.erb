@@ -1,14 +1,94 @@
 <% provide(:title, "Help") %>
 <h1><%= @customapp.name %></h1>
 <p>
-
+<div style="display:flex;flex-direction:row;">
+  <div style="flex:1 1;padding:10px;">
+	  <button class="btn btn-secondary" type="submit" onclick="toggle_item_below(this)">Setting 1 </button>  (click to expand detail)
+    <pre style="display:none;margin-top:10px;">
+memory bound: 1.2 x total_size_of_data
+data size: 200MB 
+              -- 1m activities
+              -- 50 channels
+              -- 20k users
+              -- 4k attachments
+page weight: every page has the same weight
+    </pre>
+  </div>
+  <div style="flex:1 1;padding:10px;">
+	  <button class="btn btn-secondary" type="submit" onclick="toggle_item_below(this)">Setting 2</button>
+    <pre style="display:none;margin-top:10px;">
+memory bound: 1.5 x total_size_of_data
+data size: 200MB 
+              -- 1m activities
+              -- 50 channels
+              -- 20k users
+              -- 4k attachments
+page weight: every page has the same weight
+    </pre>
+  </div>
+  <div style="flex:1 1;padding:10px;">
+	  <button class="btn btn-secondary" type="submit" onclick="toggle_item_below(this)">Setting 3</button>
+    <pre style="display:none;margin-top:10px;">
+memory bound: 5 x total_size_of_data
+data size: 200MB 
+              -- 1m activities
+              -- 50 channels
+              -- 20k users
+              -- 4k attachments
+page weight: every page has the same weight
+    </pre>
+  </div>
+  <script>
+function toggle_item_below(elem) {
+    var next = elem.nextElementSibling;
+    if (next.style.display == 'none') {
+        next.style.display = "block";
+    } else {
+        next.style.display = "none";
+    }
+}
+  </script>
+</div>
 <%= form_for @customapp do |f| %>
+
+<div style="width:600px">
+  <%= f.fields_for :mem_bound do |pf| %>
+    <b>Choose a memory bound:</b><br />
+		<div><%= pf.radio_button :mem_bound, '1.2', :checked => (@customapp.mem_bound == 1.2) %> 1.2x data size </div>
+		<div><%= pf.radio_button :mem_bound, '1.5', :checked => (@customapp.mem_bound == 1.5)  %> 1.5x data size </div>
+		<div><%= pf.radio_button :mem_bound, '5', :checked => (@customapp.mem_bound == 5)  %> 5x data size</div>
+  <% end %>
+
+	<%= f.fields_for :eval_setting do |pf| %>
+    <b>Choose a setting to evaluate:</b><br />
+		<div><%= pf.radio_button :eval_setting, '1', :checked => (@customapp.eval_setting==1) %> Use setting 1</div>
+		<div><%= pf.radio_button :eval_setting, '2', :checked => (@customapp.eval_setting==2) %> Use setting 2</div>
+		<div><%= pf.radio_button :eval_setting, '3', :checked => (@customapp.eval_setting==3) %> Use setting 3</div>
+		<div><%= pf.radio_button :eval_setting, '100', :checked => (![1,2,3].include?@customapp.eval_setting)%> Do not evaluate, just show data structures</div>
+		<button class="btn btn-info" type="submit">Save</button>
+  <% end %>
+</div>
+
+<br>
+<br>	
+
+
   <% @customapp.webpages.each do |webpage| %>
     <% next if not webpage.included%> 
-		<div style="float:right; width: 400px">
-			<h2><%= webpage.name %></h2>
-			<% webpage.queries.each_with_index do |query, index| %>
-				<h4>Query <%= (index+1) %>: </h4>
+ 	 	<div style="display:flex;flex-direction:row;margin-bottom:50px;">
+    <div class="column" style="width:600px;flex-grow:0;flex-shrink:0;margin-right:50px;text-align:center;">
+			<% if @customapp.id==1 && ['kandan_search.png','kandan_attachment.png','kandan_activity.png','kandan_user.png'].include?(webpage.screenshot_filename) %>
+			<%= link_to image_tag(webpage.screenshot_filename, style: "width: 50%", alt: webpage.name),
+              webpage_path(:id=>webpage.id) %>
+			<% else %>
+			<%= link_to image_tag(webpage.screenshot_filename, style: "width: 100%", alt: webpage.name),
+              webpage_path(:id=>webpage.id) %>
+			<% end %>
+  	</div>
+    <div style="width:400px; flex-grow:0; flex-shrink:0;">
+			<h2><%= webpage.name %> <%= webpage.description %></h2>
+			<% webpage.queries.each_with_index do |query, qid| %>
+				<h5>Query <%= (qid+1) %>: </h5>
 				<p style="font-family: Consolas, monospace; font-size: 0.8em; line-height: 100%;">
 					<% query.query.split('#').each_with_index do |queryline, index| %>
 						<% if index == 0 %>
@@ -20,32 +100,18 @@
 					<% end %>
 				</p>
 			<% end %>
-			<h4>Query weight: <%= webpage.custom_weight == 0 ? webpage.weight : webpage.custom_weight %></h4>
+			<h5>Query weight: <%= webpage.custom_weight == 0 ? webpage.weight : webpage.custom_weight %></h5>
 			<%= f.fields_for "webpages[]", webpage do |pf| %>
-				<h4>Choose page weight:</h4>
-				<div><%= pf.radio_button :weight, '0',  :style=>"width: 20px;" %>0</div>
-				<div><%= pf.radio_button :weight, '1',  :style=>"width: 20px;" %>1</div>
-				<div><%= pf.radio_button :weight, '10', :style=>"width: 20px;" %>10</div>
-				<b>Or manually input a page weight:</b>
-      		<%= pf.text_field :custom_weight, size: 10 %> <br />
+				<h5>Choose page weight:</h5>
+				<div><%= pf.radio_button :weight, '0', :checked => (webpage.weight == 0), :style=>"width: 20px;" %>0</div>
+				<div><%= pf.radio_button :weight, '1', :checked => (webpage.weight == 1), :style=>"width: 20px;" %>1</div>
+				Or manually input a page weight:
+      	<%= pf.text_field :custom_weight, size: 10, :value => '' %> <br />
 				<button class="btn btn-info" type="submit">Save</button>
 			<% end %>
 		</div>
-		<div class="column">
-			<%= link_to image_tag(webpage.screenshot_filename, style: "width: 50%", alt: webpage.name),
-              webpage_path(:id=>webpage.id) %>
-  	</div>
+		</div>
 	<% end %>
-
-  <!--
-  <%= f.fields_for :mem_bound do |pf| %>
-    <b>Choose a memory bound:</b><br />
-		<%= pf.radio_button :mem_bound, '1.2' %> 1.2x data size <br />
-		<%= pf.radio_button :mem_bound, '1.7' %> 1.7x data size <br />
-		<%= pf.radio_button :mem_bound, '3' %> 3x data size<br />
-		<button class="btn btn-info" type="submit">Save</button>
-  <% end %>
-  -->
 
 <% end %>
 
