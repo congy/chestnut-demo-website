@@ -93,9 +93,14 @@ function evalExpr(e, header, row, contexts = null) {
         const i = header.indexOf(fkField);
         return row[i];
       }
-      // Otherwise crash.
-      console.error(e, header, row);
-      throw 'TODO';
+      // "Normal" case.
+      const lh = evalExpr(e.lh, header, row, contexts);
+      if (!lh.header) {
+        console.error('lh', lh);
+        throw Error(`AssocOp missing LHS.`);
+      }
+      ({ header, row } = lh);
+      return evalExpr(e.rh, header, row, contexts);
     }
     case 'AtomValue':
       if ("'" === e.value[0])
@@ -115,6 +120,13 @@ function evalExpr(e, header, row, contexts = null) {
       const paramValue = visContext.getVarValue(paramName);
       // console.log(`Eval param, name: ${paramName}, value: ${paramValue}.`);
       return paramValue;
+    }
+    case '_var': {
+      if (!contexts) throw Error('Attemping to evaluate _var without contexts.');
+      const { qpContext: _qpContext, visContext } = contexts;
+      const val = visContext.getVarValue(e.name);
+      // Convert singleton list to single item.
+      return (1 === val.length) ? val[0] : val;
     }
     default:
       console.error(e, header, row);

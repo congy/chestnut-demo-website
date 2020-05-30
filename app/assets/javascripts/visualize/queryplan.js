@@ -7,6 +7,8 @@ class PlanContext {
     this.qpInfo = qpInfo;
     // Top level data structures, plain JSON representation.
     this.tlds = tlds;
+    // Top level data structure IDs.
+    this.tldsIds = new Set(tlds.map(ds => ds.id));
 
     // All available datastructures. Always includes the TLDS,
     // plus any additional nested datastructures encountered.
@@ -34,6 +36,9 @@ class PlanContext {
     this.loopVar = null;
     // Name of the most recent output var.
     this.outVar = null;
+
+    // Implied condition due to top level DS and lookup join.
+    this.impliedCondition = null;
 
     // Map from step to list of indices.
     this.localOutputs = new Map();
@@ -131,7 +136,7 @@ class PlanContext {
   //   return name;
   // }
 
-  exprToString(e, out = []) {
+  exprToString(e, out = [], theVar = this.loopVar) {
     switch (e.expr) {
       case 'BinOp': {
         out.push('(');
@@ -150,35 +155,41 @@ class PlanContext {
         break;
       }
       case 'AssocOp': {
-        // // Handle FK id case.
-        // if ('QueryField' === e.rh.expr && 'id' === e.rh.field) {
-        //   if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
-        //   const fkField = e.lh.field + '_id';
-        //   const i = header.indexOf(fkField);
-        //   return row[i];
-        // }
-        // Otherwise crash.
-        console.error(e, header, row);
-        throw 'TODO';
+        if ('QueryField' !== e.rh.expr) throw Error('AssocOp RHS must be query field');
+        this.exprToString(e.lh, out);
+        out.push('.', e.rh.field);
+        break;
       }
       case 'AtomValue':
         out.push(e.value);
         break;
       case 'QueryField':
-        out.push(`${this.loopVar}.${e.field}`);
+        out.push(`${theVar}.${e.field}`);
         break;
       case 'Parameter':
         out.push(this.getParamVar(e)[0]);
         break;
+      case '_var':
+        out.push(e.name);
+        break;
       default:
-        console.error(e, header, row);
+        console.error(e);
         throw 'SHOULD NOT REACH';
     }
     return out.join('');
   }
 
+  setImpliedCondition(name) {
+    this.impliedCondition = name;
+  }
+  getImpliedCondition() {
+    const cond = this.impliedCondition; // May be null.
+    this.impliedCondition = null;
+    return cond;
+  }
+
   sub() {
-    const d = new PlanContext(this.qpInfo, this.allDs, new Map(this.availDs));
+    const d = new PlanContext(this.qpInfo, this.tlds, new Map(this.availDs));
     this.subs.push(d);
 
     d.parent = this;
@@ -235,9 +246,10 @@ function qpToSteps(step, context) {
       break;
     }
     case "ExecScanStep": {
+      const idx = step.value.idx;
       // JSON representation.
-      const thisDs = context.getDs(step.value.idx);
-      if (!thisDs) throw Error(`Context missing DS IDX ${step.value.idx}.`);
+      const thisDs = context.getDs(idx);
+      if (!thisDs) throw Error(`Context missing DS IDX ${idx}.`);
 
       // Get nested datastructures.
       let targetDs = thisDs;
@@ -271,8 +283,33 @@ function qpToSteps(step, context) {
         context.writeLine(`for ${loopVars} in ${dsVar}`);
         context.writeLine(`.range((${boundsToStr(step.value.lower)}), (${boundsToStr(step.value.upper)})):`, 2);
       }
-      else
+      else {
         context.writeLine(`for ${loopVars} in ${dsVar}:`);
+
+        // Set implied condition maybe.
+        // If this is a top level DS and we are already in a loop (loopVar).
+        if (context.tldsIds.has(idx) && context.loopVar) {
+          loopContext.setImpliedCondition({
+            "expr": "BinOp",
+            "lh": {
+              "expr": "QueryField",
+              "field": "id"
+            },
+            "op": "==",
+            "rh": {
+              "expr": "AssocOp",
+              "lh": {
+                "expr": "_var",
+                "name": context.loopVar,
+              },
+              "rh": {
+                "expr": "QueryField",
+                "field": targetDs.tableType + "_id"
+              }
+            }
+          });
+        }
+      }
 
       // Recurse.
       qpToSteps(step.value.steps, loopContext);
@@ -283,10 +320,14 @@ function qpToSteps(step, context) {
       // In reality the condition applies to subsequent statements (?).
 
       let localContext = context;
+
+      const impliedCond = context.getImpliedCondition();
+      step.value.cond = step.value.cond || impliedCond; // Set step cond to implied cond if unset.
       if (step.value.cond) {
         context.writeLine(`if ${context.exprToString(step.value.cond)}:`);
         localContext = context.sub();
       }
+
       if (step.value.var.atom) {
         // Value is an "atom", meaning several things:
         // - It is a single value (not a collection).

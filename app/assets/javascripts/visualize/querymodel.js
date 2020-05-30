@@ -255,7 +255,8 @@ async function qpExec(step, qpContext, visContext) {
       }
       // Bad abstraction break.
       while (visContext.deferredResultPushes.length > initDefLen) {
-        visContext.pushToResultVar(...visContext.deferredResultPushes.pop());
+        const [ listName, valName ] = visContext.deferredResultPushes.pop();
+        visContext.pushToResultVar(listName, valName);
         await delayFn(2);
       }
       // TODO delay?
@@ -323,7 +324,7 @@ async function qpExec(step, qpContext, visContext) {
         // TODO EVAL CONDITION!
         const { header, row } = visContext.getVarValue(qpContext.loopVar)[0]; // Get first/only val from list.
         const condEval = evalExpr(step.value.cond, header, row, { qpContext, visContext });
-        console.log(`CONDITION: ${condEval}.`);
+        console.log('CONDITION:', condEval);
         if (false === condEval) { // No set if cond is false.
           continu = false;
           break;
@@ -336,7 +337,7 @@ async function qpExec(step, qpContext, visContext) {
         // Value is an "atom", meaning several things:
         // - It is a single value (not a collection).
         // - It is not a output result.
-        const [ aVar, isNew ] = localContext.getEnvVar(step.value.var);
+        const [ aVar, _isNew ] = localContext.getEnvVar(step.value.var);
         if ('count()' == step.value.expr) {
           visContext.incrementAtomVar(aVar);
         }
@@ -356,7 +357,11 @@ async function qpExec(step, qpContext, visContext) {
         // console.warn('lc.p.lv', localContext.parent.loopVar, 'lc.p.ov', localContext.parent.outVar);
         // console.warn('lc.p.p.ov', localContext.parent.parent.loopVar);
 
-        const parentContext = localContext.parent;
+        // console.warn('Options:', parentContext.outVar, parentContext.loopVar);
+        // console.warn('New options:', qpContext.parent.outVar, qpContext.parent.loopVar);
+        // console.warn('Chosen:', targetVar, localContext.loopVar);
+
+        const parentContext = qpContext.parent; // Ignore localContext due to conditions.
         let targetVar = parentContext.outVar;
         if (!visContext.varExists(targetVar))
           targetVar = parentContext.loopVar;
