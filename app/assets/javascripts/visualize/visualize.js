@@ -35,6 +35,7 @@ function createRectEl() {
 
 function createPathEl() {
     const el = document.createElementNS(xmlns, "path");
+    el.setAttribute('fill', 'none');
     el.setAttribute('stroke', 'black');
     el.setAttribute('marker-end', 'url(#head)');
     el.setAttribute('stroke-width', '2');
@@ -54,17 +55,27 @@ class Vis {
         if (null !== this.parent)
             this.parent.reflow(this);
     }
+    onClick(data) {
+        if (null !== this.parent)
+            this.parent.onClick(data);
+    }
 }
 
 class VisElem extends Vis {
     constructor(elem) {
         super();
         this.elem = elem;
+        this.x = 0;
+        this.y = 0;
+
+        elem.addEventListener('click', () => this.onClick());
     }
     reflow(_child) {
         this.reflowParent();
     }
     move(x, y) {
+        this.x = x;
+        this.y = y;
         moveEl(this.elem, x, y);
     }
     size() {
@@ -73,7 +84,7 @@ class VisElem extends Vis {
         return this.elem.getBBox();
     }
     loc() {
-        throw 'Not Implemented';
+        return { x: this.x, y: this.y };
     }
     attach(svg, x, y) {
         this.move(x, y);
@@ -103,6 +114,7 @@ class VisBox extends Vis {
         this.color = color;
         this.rect = createRectEl();
         this.rect.setAttribute('fill', color);
+        this.rect.addEventListener('click', () => this.onClick());
         if (dotted)
             this.rect.setAttribute('stroke-dasharray', '6 4');
 
@@ -182,14 +194,12 @@ class VisRecord extends Vis {
         this.label = label;
         this.data = data;
 
-        this.text = createTextEl(label);
+        this.text = new VisElem(createTextEl(label));
         // this.box = createRectEl();
         // this.box.setAttribute('fill', color);
 
-        this.stack = new VisStack([ new VisElem(this.text) ], true, vrSpacing);
-        // this.stack.setParent(this);
-
         this.color = color;
+        this.stack = new VisStack([ this.text ], true, vrSpacing);
         this.box = new VisBox(this.stack, color, vrPad, boxDotted);
         this.box.setParent(this);
 
@@ -252,8 +262,14 @@ class VisRecord extends Vis {
     }
 
     // Add sub-DS.
-    push(item) {
-        this.stack.push(item);
+    push(...args) {
+        this.stack.push(...args);
+    }
+    insert(...args) {
+        this.stack.insert(...args);
+    }
+    remove(...args) {
+        return this.stack.remove(...args);
     }
 }
 
@@ -382,7 +398,7 @@ class VisStack extends Vis {
         return true;
     }
     reflow(child) {
-        if (this._update(this.items.indexOf(child)))
+        if (this._update(Number.isInteger(child) ? child : this.items.indexOf(child)))
             this.reflowParent(this);
     }
     move(x, y, attachSvg = null) {
@@ -410,17 +426,20 @@ class VisStack extends Vis {
         this.items.forEach(x => x.detach());
     }
     clone(svg) {
-        throw Error('Cannot clone VisStack (yet).');
+        throw Error('Cannot clone VisStack (yet?).');
     }
 
     length() {
         return this.items.length;
     }
     push(item) {
-        this.items.push(item);
+        this.insert(this.items.length, item);
+    }
+    insert(i, item) {
+        this.items.splice(i, 0, item);
         item.setParent(this);
 
-        this.reflow(); // TODO could make this more efficient (?).
+        this.reflow(i - 1);
     }
     // TODO: clear() detaches but pop() does not.
     clear() {
@@ -434,10 +453,13 @@ class VisStack extends Vis {
     }
     // TODO: clear() detaches but pop() does not.
     pop() {
+        return this.remove(this.items.length - 1);
+    }
+    remove(i) {
         if (!this.items.length) return null;
-        const item = this.items.pop(); //.detach();
+        const item = this.items.splice(i, 1)[0];
         item.parent = null;
-        this.reflow(); // TODO could make this more efficient (?).
+        this.reflow(i - 1);
         return item;
     }
     get(i) {
@@ -459,12 +481,12 @@ class Arrow {
         if (head) this.setHead(head);
     }
     _update() {
-        this.el.setAttribute('d', `M ${this.tail.x} ${this.tail.y} L ${this.head.x} ${this.head.y}`);
+        this.el.setAttribute('d', `M ${this.tail.x} ${this.tail.y} Q ${this.tail.x - 40} ${this.tail.y} ${this.head.x} ${this.head.y}`);
     }
     _getLoc(vis) {
         const { width, height } = vis.size();
         let { x, y } = vis.loc();
-        x += width / 2;
+        // x += width / 2;
         y += height / 2;
         return { x, y };
     }

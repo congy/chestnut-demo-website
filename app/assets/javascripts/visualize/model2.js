@@ -16,6 +16,8 @@ class ChestnutModel {
     }
     // Form items into new DS.
     async form(svg, chestnutVis, delayFn) {
+        const labelDict = {};
+
         for (let i = 0; i < this.tlds.length; i++) {
             const ds = this.tlds[i];
             const dsModel = this.model[i];
@@ -24,7 +26,7 @@ class ChestnutModel {
 
             const labelRow = new VisStack([], false, 20, 220);
             labelRow.attach(svg, -100, 100);
-            makeLabel(svg, dsModel, labelRow);
+            makeLabel(svg, dsModel, labelRow, labelDict);
             chestnutVis.push(labelRow);
 
             await delayFn();
@@ -33,8 +35,33 @@ class ChestnutModel {
     }
 }
 
-function makeLabel(svg, model, parentVis) {
-    let text = dsVarName(model);
+function stringifyPredicate(e) {
+    switch(e.expr) {
+        case 'BinOp': {
+            let lhs = stringifyPredicate(e.lh);
+            if ('BinOp' === e.lh.expr) lhs = `(${lhs})`;
+            let rhs = stringifyPredicate(e.rh);
+            if ('BinOp' === e.rh.expr) rhs = `(${rhs})`;
+            return `${lhs} ${e.op} ${rhs}`;
+        }
+        case 'QueryField':
+            return e.field;
+        case 'AtomValue':
+            return e.value;
+        case 'Parameter':
+            return `param_${e.symbol}`;
+        case 'AssocOp':
+            if ('QueryField' !== e.rh.expr || 'id' !== e.rh.field) throw Error(`Unexpected AssocOp RH: ${e.rh.expr}.`);
+            if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
+            return `${e.lh.field}_id`;
+        default:
+            console.error('Unhandled expr:', e);
+            throw `Unhandled expr, type: ${e.expr}.`;
+    }
+}
+
+function makeLabel(svg, model, parentVis, labelDict = {}) {
+    const text = dsVarName(model);
 
     const sortFields = [];
     for (const { key } of (model.keys || [])) {
@@ -43,24 +70,51 @@ function makeLabel(svg, model, parentVis) {
         else if ('AssocOp' === key.expr) {
             if ('QueryField' !== key.rh.expr || 'id' !== key.rh.field) throw Error(`Unexpected AssocOp RH: ${key.rh.expr}.`);
             if ('QueryField' !== key.lh.expr) throw Error(`Unexpected AssocOp LH: ${key.lh.expr}.`);
-            sortFields.push(key.lh.field + '_id');
+            sortFields.push(`${key.lh.field}_id`);
         }
         else
             throw Error(`Unexpected expr: ${key.expr}.`);
     }
-    if (sortFields.length) {
-        text += ` (${sortFields.join(', ')})`;
-        // const el = new VisElem(createTextEl(`(${sortFields.join(', ')})`));
-        // el.attach(svg, -100, 100);
-        // label.push(el);
-    }
+    const columns = sortFields.length ? `Columns: ${sortFields.join(', ')}` : null;
+    const predicate = model.condition && `Predicate: ${stringifyPredicate(model.condition)}`;
 
-    const label = new VisRecord(text, getColorFromTable(model.tableType));
+    const dotted = 'ptr' === model.value.type;
+    const label = new VisRecord(text, getColorFromTable(model.tableType), null, dotted);
     label.attach(svg, -100, 100);
+    labelDict[model.id] = label;
+
     parentVis.push(label);
 
+    label.onClick = (() => {
+        let show = false;
+        let arrow = null;
+        return () => {
+            show = !show;
+            if (show) {
+                // Reverse order.
+                for (const str of [ predicate, columns ]) {
+                    if (str) {
+                        const visEl = new VisElem(createTextEl(str));
+                        visEl.attach(svg, -100, label.loc().y);
+                        label.insert(1, visEl);
+                    }
+                }
+                // Add arrow.
+                if (dotted) {
+                    arrow = new Arrow(label.text, labelDict[model.value.target].text)
+                    arrow.attach(svg);
+                }
+            }
+            else {
+                if (arrow) arrow.detach();
+                if (predicate) label.remove(1).detach();
+                if (columns) label.remove(1).detach();
+            }
+        };
+    })();
+
     for (const nestedModel of (model.value && model.value.nested || []))
-        makeLabel(svg, nestedModel, label);
+        makeLabel(svg, nestedModel, label, labelDict);
 }
 
 function getDS(model, data, rows, parentTableName = null) {
