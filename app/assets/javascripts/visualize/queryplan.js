@@ -270,7 +270,7 @@ function qpToSteps(step, context) {
 
       // Get nested datastructures back for the for-loop.
       const nestedDsVars = nestedDses.map(nestedDs =>
-          loopContext.getDsVar(nestedDs.id, `${thisDs.tableType}_${nestedDs.tableType}`)[0]);
+          loopContext.getDsVar(nestedDs.id, `${thisDs.tableType}_${nestedDs.tableType}_${nestedDs.id}`)[0]);
 
       // Print the line.
       const loopVars = [ loopVar, ...nestedDsVars ].join(', ');
