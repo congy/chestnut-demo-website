@@ -60,6 +60,8 @@ class QueryPlanModel {
 
 class VisContext {
   constructor(svg, qpVis, chestnutModel, delayFn, data, markLinesFn) {
+    if (!chestnutModel) throw Error('Invalid chestnutModel: ' + chestnutModel);
+
     this.svg = svg;
     this.qpVis = qpVis;
     this.chestnutModel = chestnutModel;

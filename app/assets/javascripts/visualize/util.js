@@ -232,7 +232,7 @@ function getSuitableParamValues(qpInfo, data) {
         continue;
       }
 
-      let val = evalExpr(expr, header, row);
+      let val = evalExpr(expr, header, row, null, data);
       if ('oid' === param.type || 'uint' === param.type)
         val = Number(val)
       else if ('like' === e.op) {
