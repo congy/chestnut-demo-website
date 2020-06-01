@@ -1,15 +1,19 @@
 // Javascript for the page UI.
 
 const xmlns = "http://www.w3.org/2000/svg";
-async function get_model() {
-  // const res = await fetch('/api/cnpy' + window.location.search, { method: 'post' });
-  // let text = await res.text();
-  // text = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-  // return JSON.parse(text);
-  return EXAMPLE_JSON;
+async function getModel() {
+  const res = await fetch('/api/cnpy' + window.location.search, { method: 'post' });
+  let text = await res.text();
+  text = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  let model = JSON.parse(text);
+  model.evalSetting = Number(res.headers.get('x-cn-eval-setting'));
+  return model;
+
+  // EXAMPLE_JSON.evalSetting = 100;
+  // return EXAMPLE_JSON;
 }
 async function init() {
-  const modelPromise = get_model();
+  const modelPromise = getModel();
 
   window.svg = document.getElementsByTagName('svg')[0];
   window.ctrl = new VisualizerController(svg);
@@ -25,7 +29,7 @@ async function init() {
   const dsFilt = preprocessDs(ds, allUsedDsIds, pruned);
   console.log(`Pruned ${new Set(pruned).size} DSes in ${pruned.length} locations:`, pruned);
 
-  ctrl.load(data);
+  ctrl.load(model);
   ctrl.draw();
 
   const playerEl = document.getElementById('player');
@@ -67,14 +71,14 @@ function handleQueryPlans({ ds, qp, data: _data }) {
     qpContext.usedDsIds.forEach(dsId => allUsedDsIds.add(dsId));
 
     const a = document.createElement('a');
-    a.innerText = `Query ${qpInfo.qid}`;
+    a.innerText = `${qpInfo.hrName}`;
     a.href = '#';
     a.onclick = () => { ctrl.playQp(qp[i], qpContext, window.player.getDelayer(400)); return false; };
     a.style['margin-left'] = '1em';
     buttonsEl.appendChild(a);
 
     const h1 = document.createElement('h1')
-    h1.innerText = `${i} Query ${qpInfo.qid}, Plan ${qpInfo.pid}`;
+    h1.innerText = `${qpInfo.hrName} (${qpInfo.qid}), Plan ${qpInfo.pid}`;
     plansEl.appendChild(h1);
 
     let pre = document.createElement('pre');
@@ -117,6 +121,17 @@ function preprocessDs(ds, allUsedDsIds, pruned = []) {
 
       return (aval - bval) || (a.id - b.id);
     });
+}
+
+const memBounds = [ null, 'small', 'medium', 'large' ];
+async function getRuntime(queryName, evalSetting) {
+  if (memBounds.length <= evalSetting)
+    return null;
+  const memBound = memBounds[evalSetting];
+  let res = await fetch(`http://dragon.cs.washington.edu:3001/test?id=${queryName}&mem_bound=${memBound}`);
+  let dat = await res.json();
+  console.log('Runtime result:', dat);
+  return dat;
 }
 
 const CHAR_PLAY  = '\u25B6';

@@ -230,7 +230,7 @@ function qpToSteps(step, context) {
         inputs.push(`${name}: ${inp.type}`);
       }
       const outType = out.atom ? out.type : `List[${out.type}]`;
-      context.writeLine(`def query_${qpInfo.qid}(${inputs.join(', ')}) -> ${outType}:`);
+      context.writeLine(`def ${qpInfo.hrName}(${inputs.join(', ')}) -> ${outType}:`);
       context.writeLine(`${context.outVar}: ${outType} = ${out.atom ? 'null' : '[]'}`, 1);
 
       qpToSteps(step.value.steps, context.sub());

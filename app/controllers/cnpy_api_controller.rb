@@ -30,37 +30,40 @@ class CnpyApiController < ApplicationController
     args.push('--membound_factor', "#{@customapp.mem_bound}")
     args.push('--queries', queries.join('|'))
     # args.push('--queries',"(q_ai_1,1)|(q_ai_2,1)|(q_ai_3,1)|(q_as_1,1)|(q_di_1,1)|(q_ti_1,1)|(q_ci_1,1)|(q_cs_1,1)|(q_ms_1,1)")
-    puts ("args = #{args.inspect}")
+    puts("args = #{args.inspect}")
 
     # Run chestnut python script
     poutput, pinfo = Open3.capture2('python3', 'chestnut/run.py', *args) # ...
     status = 0 == pinfo.exitstatus ? 200 : 500
 
+    puts(@customapp.eval_setting)
+
+    response.set_header("x-cn-eval-setting", @customapp.eval_setting.to_s)
     # https://stackoverflow.com/a/12385656/2398020
     respond_to do |format|
       format.json { render :json => poutput, :status => status }
     end
   end
-  def get_tsv
-    # TODO: hack since files are not thread safe.
-    path = './chestnut/repo/benchmark/kandan/data/kandan_lg/*.tsv'
-    data = Dir.glob(path).map do |file_path|
-      name = file_path[file_path.rindex('/') + 1 .. -5]
+  # def get_tsv
+  #   # TODO: hack since files are not thread safe.
+  #   path = './chestnut/repo/benchmark/kandan/data/kandan_lg/*.tsv'
+  #   data = Dir.glob(path).map do |file_path|
+  #     name = file_path[file_path.rindex('/') + 1 .. -5]
 
-      rows = File.open(file_path).map { |line| line.strip.split('|') }
-      head = rows.shift()
-      [
-        name, 
-        {
-          :header => head,
-          :rows => rows,
-        }
-      ]
-    end
-    data = data.to_h
+  #     rows = File.open(file_path).map { |line| line.strip.split('|') }
+  #     head = rows.shift()
+  #     [
+  #       name, 
+  #       {
+  #         :header => head,
+  #         :rows => rows,
+  #       }
+  #     ]
+  #   end
+  #   data = data.to_h
 
-    respond_to do |format|
-      format.json { render :json => data, :status => 200 }
-    end
-  end
+  #   respond_to do |format|
+  #     format.json { render :json => data, :status => 200 }
+  #   end
+  # end
 end

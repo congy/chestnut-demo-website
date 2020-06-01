@@ -157,7 +157,7 @@ function evalExpr(e, header, row, contexts = null, allData = null) {
       // FK row case.
       if (e.assoc) {
         const out = getJoinRows(header, row, e.assoc, allData);
-        console.log('QueryField FK result:', out);
+        // console.log('QueryField FK result:', out);
         return out;
         // const fkIndex = header.indexOf(e.fkField);
         // const relTable = allData && allData[e.fkTable];

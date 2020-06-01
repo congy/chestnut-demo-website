@@ -3,11 +3,12 @@
 class VisualizerController {
     constructor(svg) {
         this.svg = svg;
+
+        this.runtimeId = 0;
     }
-    load(data) {
-        // const res = await fetch('/api/tsv');
-        // const json = await res.json();
-        this.data = data; //json;
+    load(model) {
+        this.evalSetting = model.evalSetting;
+        this.data = model.data;
     }
     draw() {
         document.getElementById('loading').remove();
@@ -100,6 +101,23 @@ class VisualizerController {
         await this.chestnutModel.form(this.svg, this.chestnutVis, () => delay(50));
     }
     async playQp(qpInfo, qpContext, delayer = null) {
+        const runtimeId = ++this.runtimeId;
+        const runtime = document.getElementById('runtime');
+        runtime.innerHTML = '';
+        getRuntime(qpInfo.hrName, this.evalSetting)
+            .then(d => {
+                if (this.runtimeId !== runtimeId) return;
+
+                const fmt = ms => {
+                    if (ms > 5000) return ((ms / 1000) | 0).toString().slice(0, 3) + 's'
+                    ms = (ms | 0);
+                    return ms.toString() + 'ms';
+                };
+                const sql = d.sql_query_time + d.rails_deserialize;
+                const cn = d.chestnut_query_time + d.chestnut_deserialize;
+                runtime.innerHTML = `MySQL+AR: ${fmt(sql)}<br>Chestnut: ${fmt(cn)}`;
+            });
+
         if (!delayer)
             delayer = (s = 1) => delay(s * 400);
 
