@@ -27,11 +27,11 @@ function getRowSubsetByCondition({ header, rows }, cond = null, allData) {
 }
 
 // Sorts in-place.
-function sortIndexRows({ header, rows }, keys) {
+function sortIndexRows({ header, rows }, keys, allData) {
   function cmp(rowA, rowB) {
     for (const { key } of keys) {
-      const valA = evalExpr(key, header, rowA);
-      const valB = evalExpr(key, header, rowB);
+      const valA = evalExpr(key, header, rowA, null, allData);
+      const valB = evalExpr(key, header, rowB, null, allData);
       if (valA > valB) return +1;
       if (valA < valB) return -1;
     }
@@ -275,6 +275,8 @@ function determineTableType(_data, model, _parentTableName = null) {
 }
 
 function getJoinRows(header, row, assoc, data) {
+  if (!data) throw Error('Data is invalid.');
+
   let parentIsLeft;
   if (header === data[assoc.leftTable].header)
     parentIsLeft = true;

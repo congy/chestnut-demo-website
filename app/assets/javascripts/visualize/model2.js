@@ -143,7 +143,7 @@ class DS {
         let { header, rows: _allRows } = data[this.table];
         this.rows = getRowSubsetByCondition({ header, rows }, model.condition, data);
         if ('Index' === model.type)
-            sortIndexRows({ header, rows: this.rows }, model.keys);
+            sortIndexRows({ header, rows: this.rows }, model.keys, data);
 
         console.log(`${model.id}: ${this.type}[${this.path}]: ${this.rows.length}/${data[this.table].rows.length} rows.`);
 
