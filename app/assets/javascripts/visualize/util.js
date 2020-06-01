@@ -62,6 +62,10 @@ function evalExpr(e, header, row, contexts = null, allData = null) {
       let lh = evalExpr(e.lh, header, row, contexts, allData);
       let rh = evalExpr(e.rh, header, row, contexts, allData); // No short-circuit handling.
 
+      // NaN to propegate false.
+      if (Number.isNaN(lh) || Number.isNaN(rh))
+        return Number.NaN;
+
       // Handle mismatched types.
       if (typeof lh !== typeof rh) {
         if ('string' === typeof lh) {
@@ -86,9 +90,26 @@ function evalExpr(e, header, row, contexts = null, allData = null) {
     case 'SetOp': {
       // LH exists in RH (I think).
       let lh = evalExpr(e.lh, header, row, contexts, allData);
-      let rh = evalExpr(e.rh, header, row, contexts, allData);
-      console.error(lh, rh);
-      throw 'TODO: Need to eval RH completely from top.';
+      if (!lh) // NaN case
+        return lh;
+
+      if (!lh.rows) {
+        console.error(e, header, row, contexts, allData);
+        console.error('LH', lh);
+        throw Error('SetOp invalid LHS.');
+      }
+
+      const exitBool = 'EXIST' == e.op // EXISTS -> true, FORALL -> false;
+      for (const relRow of lh.rows) {
+        let val = evalExpr(e.rh, lh.header, relRow, contexts, allData);
+        if (exitBool === val)
+          return exitBool;
+      }
+      return !exitBool;
+      // console.error(lh);
+      // let rh = evalExpr(e.rh, header, row, contexts, allData);
+      // console.error(rh);
+      // throw 'TODO: Need to eval RH completely from top.';
     }
     case 'AssocOp': {
       // Handle FK id case.
@@ -130,21 +151,24 @@ function evalExpr(e, header, row, contexts = null, allData = null) {
       throw Error(`Failed to parse AtomValue: <<${e.value}>>.`);
     case 'QueryField':
       // FK row case.
-      if (e.fkTable) {
-        const fkIndex = header.indexOf(e.fkField);
-        const relTable = allData && allData[e.fkTable];
-        if (!relTable || 0 > fkIndex) {
-          console.error(e, header, row, contexts, allData);
-          throw Error(`QueryField field not found: ${e.field}`);
-        }
-        const fk = row[fkIndex];
-        const { header: relHeader, rows: relRows } = relTable;
-        const idIndex = relHeader.indexOf('id'); // TODO hardcoded?
-        if (0 > idIndex) throw Error('Failed to do QueryField FK join, target missing ID.');
-        const relRow = relRows.find(row => fk === row[idIndex]);
-        const out = { header: relHeader, row: relRow };
-        console.warn('QueryField FK Result:', out);
+      if (e.assoc) {
+        const out = getJoinRows(header, row, e.assoc, allData);
+        console.log('QueryField FK result:', out);
         return out;
+        // const fkIndex = header.indexOf(e.fkField);
+        // const relTable = allData && allData[e.fkTable];
+        // if (!relTable || 0 > fkIndex) {
+        //   console.error(e, header, row, contexts, allData);
+        //   throw Error(`QueryField field not found: ${e.field}`);
+        // }
+        // const fk = row[fkIndex];
+        // const { header: relHeader, rows: relRows } = relTable;
+        // const idIndex = relHeader.indexOf('id'); // TODO hardcoded?
+        // if (0 > idIndex) throw Error('Failed to do QueryField FK join, target missing ID.');
+        // const relRow = relRows.find(row => fk === row[idIndex]);
+        // const out = { header: relHeader, row: relRow };
+        // console.warn('QueryField FK Result:', out);
+        // return out;
       }
       // Normal case.
       const i = header.indexOf(e.field);
@@ -250,6 +274,69 @@ function determineTableType(_data, model, _parentTableName = null) {
   // }
 }
 
+function getJoinRows(header, row, assoc, data) {
+  let parentIsLeft;
+  if (header === data[assoc.leftTable].header)
+    parentIsLeft = true;
+  else if (header === data[assoc.rightTable].header)
+    parentIsLeft = false;
+  else
+    throw Error(`Association without either table?`);
+
+  const { header: nestedHeader, rows: nestedAllRows } = data[parentIsLeft ? assoc.rightTable : assoc.leftTable];
+
+  if ('many_to_many' === assoc.assocType) {
+    const { header: assocHeader, rows: assocRows } = data[assoc.table];
+    const tableIdIndex = header.indexOf('id');
+    const rowId = row[tableIdIndex];
+
+    const assocTableFkIndex = assocHeader.indexOf(parentIsLeft ? assoc.leftFkField : assoc.rightFkField);
+    const assocNestedFkIndex = assocHeader.indexOf(parentIsLeft ? assoc.rightFkField : assoc.leftFkField);
+
+    const nestedRows = [];
+    for (const assocRow of assocRows) {
+      const assocTableFk = assocRow[assocTableFkIndex];
+      const assocNestedFk = assocRow[assocNestedFkIndex];
+      if (rowId === assocTableFk) {
+        nestedRows.push(getRowById(nestedHeader, nestedAllRows, assocNestedFk));
+      }
+    }
+    //if (!nestedRows.length) debugger;
+    return {
+      header: nestedHeader,
+      rows: nestedRows,
+      row: nestedRows[0],
+    };
+  }
+  else if ('one_to_many' === assoc.assocType) {
+    // console.log(assoc);
+
+    const parentTableKeyField = parentIsLeft ? 'id' : assoc.rightFkField;
+    const parentTableKeyIndex = header.indexOf(parentTableKeyField);
+    if (parentTableKeyIndex < 0) throw Error(`Failed to find field "${parentTableKeyField}" in table "${tableName}", header: ${header}`);
+
+    const nestedTableKeyField = parentIsLeft ? assoc.rightFkField : 'id';
+    const nestedTableKeyIndex = nestedHeader.indexOf(nestedTableKeyField);
+    if (nestedTableKeyIndex < 0) throw Error(`Failed to find field "${nestedTableKeyField}" in table "${nestedName}", header: ${nestedHeader}`);
+
+    const key = row[parentTableKeyIndex];
+
+    const nestedRows = [];
+    for (const nestedRow of nestedAllRows) {
+      if (key === nestedRow[nestedTableKeyIndex]) {
+        nestedRows.push(nestedRow);
+      }
+    }
+    // if (!nestedRows.length) debugger;
+    return {
+      header: nestedHeader,
+      rows: nestedRows,
+      row: nestedRows[0],
+    };
+  }
+  throw Error(`Unknown assocType: ${assoc.assocType}`);
+}
+
 function getNestedRows(data, model, header, row, nestedModel) {
   const tableName = model.tableType;
   const nestedName = nestedModel.tableType;
@@ -266,64 +353,65 @@ function getNestedRows(data, model, header, row, nestedModel) {
   const assoc = nestedModel.association;
 
   if (assoc) {
-    let parentIsLeft;
-    if (assoc.leftTable === tableName) {
-      //console.log('left table is parent table.');
-      parentIsLeft = true;
-    }
-    else if (assoc.rightTable === tableName) {
-      //console.log('right table is parent table.');
-      parentIsLeft = false;
-    }
-    else {
-      throw Error(`Association without either table?`);
-    }
+    return getJoinRows(header, row, assoc, data).rows;
+    // let parentIsLeft;
+    // if (assoc.leftTable === tableName) {
+    //   //console.log('left table is parent table.');
+    //   parentIsLeft = true;
+    // }
+    // else if (assoc.rightTable === tableName) {
+    //   //console.log('right table is parent table.');
+    //   parentIsLeft = false;
+    // }
+    // else {
+    //   throw Error(`Association without either table?`);
+    // }
 
-    const { header: nestedHeader, rows: nestedAllRows } = data[parentIsLeft ? assoc.rightTable : assoc.leftTable];
+    // const { header: nestedHeader, rows: nestedAllRows } = data[parentIsLeft ? assoc.rightTable : assoc.leftTable];
 
-    if ('many_to_many' === assoc.assocType) {
-      const { header: assocHeader, rows: assocRows } = data[assoc.table];
-      const tableIdIndex = header.indexOf('id');
-      const rowId = row[tableIdIndex];
+    // if ('many_to_many' === assoc.assocType) {
+    //   const { header: assocHeader, rows: assocRows } = data[assoc.table];
+    //   const tableIdIndex = header.indexOf('id');
+    //   const rowId = row[tableIdIndex];
 
-      // TODO this may need to be left-right indifferent.
-      const assocTableFkIndex = assocHeader.indexOf(parentIsLeft ? assoc.leftFkField : assoc.rightFkField);
-      const assocNestedFkIndex = assocHeader.indexOf(parentIsLeft ? assoc.rightFkField : assoc.leftFkField);
+    //   // TODO this may need to be left-right indifferent.
+    //   const assocTableFkIndex = assocHeader.indexOf(parentIsLeft ? assoc.leftFkField : assoc.rightFkField);
+    //   const assocNestedFkIndex = assocHeader.indexOf(parentIsLeft ? assoc.rightFkField : assoc.leftFkField);
 
-      const nestedRows = [];
-      for (const assocRow of assocRows) {
-        const assocTableFk = assocRow[assocTableFkIndex];
-        const assocNestedFk = assocRow[assocNestedFkIndex];
-        if (rowId === assocTableFk) {
-          nestedRows.push(getRowById(nestedHeader, nestedAllRows, assocNestedFk));
-        }
-      }
-      //if (!nestedRows.length) debugger;
-      return nestedRows;
-    }
-    else {
-      // console.log(assoc);
+    //   const nestedRows = [];
+    //   for (const assocRow of assocRows) {
+    //     const assocTableFk = assocRow[assocTableFkIndex];
+    //     const assocNestedFk = assocRow[assocNestedFkIndex];
+    //     if (rowId === assocTableFk) {
+    //       nestedRows.push(getRowById(nestedHeader, nestedAllRows, assocNestedFk));
+    //     }
+    //   }
+    //   //if (!nestedRows.length) debugger;
+    //   return nestedRows;
+    // }
+    // else if ('one_to_many' === assoc.assocType) {
+    //   // console.log(assoc);
 
-      const parentTableKeyField = parentIsLeft ? 'id' : assoc.rightFkField;
-      const parentTableKeyIndex = header.indexOf(parentTableKeyField);
-      if (parentTableKeyIndex < 0) throw Error(`Failed to find field "${parentTableKeyField}" in table "${tableName}", header: ${header}`);
+    //   const parentTableKeyField = parentIsLeft ? 'id' : assoc.rightFkField;
+    //   const parentTableKeyIndex = header.indexOf(parentTableKeyField);
+    //   if (parentTableKeyIndex < 0) throw Error(`Failed to find field "${parentTableKeyField}" in table "${tableName}", header: ${header}`);
 
-      const nestedTableKeyField = parentIsLeft ? assoc.rightFkField : 'id';
-      const nestedTableKeyIndex = nestedHeader.indexOf(nestedTableKeyField);
-      if (nestedTableKeyIndex < 0) throw Error(`Failed to find field "${nestedTableKeyField}" in table "${nestedName}", header: ${nestedHeader}`);
+    //   const nestedTableKeyField = parentIsLeft ? assoc.rightFkField : 'id';
+    //   const nestedTableKeyIndex = nestedHeader.indexOf(nestedTableKeyField);
+    //   if (nestedTableKeyIndex < 0) throw Error(`Failed to find field "${nestedTableKeyField}" in table "${nestedName}", header: ${nestedHeader}`);
 
-      const key = row[parentTableKeyIndex];
+    //   const key = row[parentTableKeyIndex];
 
-      const nestedRows = [];
-      for (const nestedRow of nestedAllRows) {
-        if (key === nestedRow[nestedTableKeyIndex]) {
-          nestedRows.push(nestedRow);
-        }
-      }
-      // if (!nestedRows.length) debugger;
-      return nestedRows;
-    }
-    throw 'unreachable';
+    //   const nestedRows = [];
+    //   for (const nestedRow of nestedAllRows) {
+    //     if (key === nestedRow[nestedTableKeyIndex]) {
+    //       nestedRows.push(nestedRow);
+    //     }
+    //   }
+    //   // if (!nestedRows.length) debugger;
+    //   return nestedRows;
+    // }
+    // throw Error(`Unknown assocType: ${assoc.assocType}`);
   }
 
   // INDICES FROM HERE ON?
