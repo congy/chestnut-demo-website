@@ -112,13 +112,13 @@ function evalExpr(e, header, row, contexts = null, allData = null) {
       // throw 'TODO: Need to eval RH completely from top.';
     }
     case 'AssocOp': {
-      // Handle FK id case.
-      if ('QueryField' === e.rh.expr && 'id' === e.rh.field) {
-        if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
-        const fkField = e.lh.field + '_id';
-        const i = header.indexOf(fkField);
-        return row[i];
-      }
+      // // Handle FK id case.
+      // if ('QueryField' === e.rh.expr && 'id' === e.rh.field) {
+      //   if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
+      //   const fkField = e.lh.field + '_id';
+      //   const i = header.indexOf(fkField);
+      //   return row[i];
+      // }
       // "Normal" case.
       const lh = evalExpr(e.lh, header, row, contexts, allData);
       if (undefined == lh) {

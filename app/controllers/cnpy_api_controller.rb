@@ -18,7 +18,8 @@ class CnpyApiController < ApplicationController
    
     puts ("queries = #{queries}") 
     # Argument parsing.
-    args = [ '--scale', '10.0' ]
+    # First arg is app.
+    args = [ 'kandan', '--scale', '10.0' ]
     unless params[:single_query].nil?
       args.push('--single_query', params[:single_query])
     end
