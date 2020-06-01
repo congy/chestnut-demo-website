@@ -6074,6 +6074,18 @@ window.EXAMPLE_JSON = {
           "documents",
           "0",
           "6"
+        ],
+        [
+          "9",
+          "issue_tracking",
+          "0",
+          "2"
+        ],
+        [
+          "10",
+          "issue_tracking",
+          "0",
+          "1"
         ]
       ]
     },
@@ -6684,28 +6696,28 @@ window.EXAMPLE_JSON = {
         [
           "1",
           "IVTVoWcpnwoDkLCsrZFqbFjH",
-          "0",
+          "1",
           "3428191106",
           "38"
         ],
         [
           "2",
           "wUYAfbGvbVhnrXJKENarXJlz",
-          "1",
+          "0",
           "1117758549",
           "85"
         ],
         [
           "3",
           "cFmQbfeTAHXadKExuvLenAoi",
-          "1",
+          "0",
           "-3913256134",
           "69"
         ],
         [
           "4",
           "uuOZxnsNeIxIMGuHFHcQFkNW",
-          "0",
+          "1",
           "-2237695429",
           "26"
         ],

@@ -199,6 +199,7 @@ function evalExpr(e, header, row, contexts = null, allData = null) {
   }
 }
 
+// Gets values for all params.
 // { qid, inputs, outputs, pred, pid, plan } = qpInfo
 function getSuitableParamValues(qpInfo, data) {
   const out = {};
@@ -210,34 +211,39 @@ function getSuitableParamValues(qpInfo, data) {
   if (qpInfo.pred) stack.push(qpInfo.pred);
   while (stack.length) {
     const e = stack.pop(); 
-    if ('BinOp' !== e.expr) {
-      console.error(e);
-      throw Error(`Encountered non-binary op searching for param value: ${e.expr}.`);
-    }
-    let param, expr;
-    if ('Parameter' === e.lh.expr) {
-      if ('Parameter' === e.rh.expr) throw Error('BinOp has two parameters.')
-      param = e.lh;
-      expr = e.rh;
-    }
-    else if ('Parameter' === e.rh.expr) {
-      param = e.rh;
-      expr = e.lh;
-    }
-    else {
-      // Neither is param so we don't really care about the value.
-      stack.push(e.lh, e.rh);
+    if ('BinOp' === e.expr) {
+      let param, expr;
+      if ('Parameter' === e.lh.expr) {
+        if ('Parameter' === e.rh.expr) throw Error('BinOp has two parameters.')
+        param = e.lh;
+        expr = e.rh;
+      }
+      else if ('Parameter' === e.rh.expr) {
+        param = e.rh;
+        expr = e.lh;
+      }
+      else {
+        // Neither is param so we don't really care about the value.
+        stack.push(e.lh, e.rh);
+        continue;
+      }
+
+      let val = evalExpr(expr, header, row);
+      if ('oid' === param.type || 'uint' === param.type)
+        val = Number(val)
+      else if ('like' === e.op) {
+        const words = val.split(/\W+/);
+        val = words[(Math.random() * words.length) | 0];
+      }
+      out[param.symbol] = val;
       continue;
     }
+    // if ('AtomValue' === e.expr) {
+    //   continue;
+    // }
 
-    let val = evalExpr(expr, header, row);
-    if ('oid' === param.type || 'uint' === param.type)
-      val = Number(val)
-    else if ('like' === e.op) {
-      const words = val.split(/\W+/);
-      val = words[(Math.random() * words.length) | 0];
-    }
-    out[param.symbol] = val;
+    // console.error(e, stack);
+    // throw Error(`Encountered unhandled op searching for param value: ${e.expr}.`);
   }
 
   return out;

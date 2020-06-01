@@ -2,11 +2,11 @@
 
 const xmlns = "http://www.w3.org/2000/svg";
 async function get_model() {
-  const res = await fetch('/api/cnpy' + window.location.search, { method: 'post' });
-  let text = await res.text();
-  text = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-  return JSON.parse(text);
-  // return EXAMPLE_JSON;
+  // const res = await fetch('/api/cnpy' + window.location.search, { method: 'post' });
+  // let text = await res.text();
+  // text = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  // return JSON.parse(text);
+  return EXAMPLE_JSON;
 }
 async function init() {
   const modelPromise = get_model();

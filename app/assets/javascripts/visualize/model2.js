@@ -35,13 +35,15 @@ class ChestnutModel {
     }
 }
 
+const parenTypes = new Set([ 'BinOp', 'SetOp' ]);
 function stringifyPredicate(e) {
     switch(e.expr) {
-        case 'BinOp': {
+        case 'BinOp':
+        case 'SetOp': {
             let lhs = stringifyPredicate(e.lh);
-            if ('BinOp' === e.lh.expr) lhs = `(${lhs})`;
+            if (parenTypes.has(e.lh.expr)) lhs = `(${lhs})`;
             let rhs = stringifyPredicate(e.rh);
-            if ('BinOp' === e.rh.expr) rhs = `(${rhs})`;
+            if (parenTypes.has(e.rh.expr)) rhs = `(${rhs})`;
             return `${lhs} ${e.op} ${rhs}`;
         }
         case 'QueryField':
@@ -51,9 +53,9 @@ function stringifyPredicate(e) {
         case 'Parameter':
             return `param_${e.symbol}`;
         case 'AssocOp':
-            if ('QueryField' !== e.rh.expr || 'id' !== e.rh.field) throw Error(`Unexpected AssocOp RH: ${e.rh.expr}.`);
+            // if ('QueryField' !== e.rh.expr || 'id' !== e.rh.field) throw Error(`Unexpected AssocOp RH: ${e.rh.expr}.`);
             if ('QueryField' !== e.lh.expr) throw Error(`Unexpected AssocOp LH: ${e.lh.expr}.`);
-            return `${e.lh.field}_id`;
+            return `${e.lh.field}.${e.rh.field}`;
         default:
             console.error('Unhandled expr:', e);
             throw `Unhandled expr, type: ${e.expr}.`;
@@ -68,9 +70,9 @@ function makeLabel(svg, model, parentVis, labelDict = {}) {
         if ('QueryField' === key.expr)
             sortFields.push(key.field);
         else if ('AssocOp' === key.expr) {
-            if ('QueryField' !== key.rh.expr || 'id' !== key.rh.field) throw Error(`Unexpected AssocOp RH: ${key.rh.expr}.`);
+            // if ('QueryField' !== key.rh.expr || 'id' !== key.rh.field) throw Error(`Unexpected AssocOp RH: ${key.rh.expr}.`);
             if ('QueryField' !== key.lh.expr) throw Error(`Unexpected AssocOp LH: ${key.lh.expr}.`);
-            sortFields.push(`${key.lh.field}_id`);
+            sortFields.push(`${key.lh.field}.${key.rh.field}`);
         }
         else
             throw Error(`Unexpected expr: ${key.expr}.`);
