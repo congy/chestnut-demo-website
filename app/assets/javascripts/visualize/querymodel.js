@@ -297,7 +297,7 @@ async function qpExec(step, qpContext, visContext) {
         console.log(`Set loop var: ${loopVar} = ID ${recordModel.recordId}`);
 
         if (leedDs.condition) {
-          const condEval = evalExpr(leedDs.condition, recordModel.header, recordModel.row, { qpContext, visContext });
+          const condEval = evalExpr(leedDs.condition, recordModel.header, recordModel.row, { qpContext, visContext }, visContext.data);
           console.log(`Index condition eval: ${condEval} (skipping if false).`);
           // Skip if index condition is not met.
           if (!condEval) continue;
@@ -323,7 +323,7 @@ async function qpExec(step, qpContext, visContext) {
       if (step.value.cond) {
         // TODO EVAL CONDITION!
         const { header, row } = visContext.getVarValue(qpContext.loopVar)[0]; // Get first/only val from list.
-        const condEval = evalExpr(step.value.cond, header, row, { qpContext, visContext });
+        const condEval = evalExpr(step.value.cond, header, row, { qpContext, visContext }, visContext.data);
         console.log('CONDITION:', condEval);
         if (false === condEval) { // No set if cond is false.
           continu = false;

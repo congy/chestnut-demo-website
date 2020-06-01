@@ -32,6 +32,10 @@ function sortIndexRows({ header, rows }, keys, allData) {
     for (const { key } of keys) {
       const valA = evalExpr(key, header, rowA, null, allData);
       const valB = evalExpr(key, header, rowB, null, allData);
+      const numA = Number(valA);
+      const numB = Number(valB);
+      if (Number.isFinite(numA) && Number.isFinite(numB))
+        return numA - numB;
       if (valA > valB) return +1;
       if (valA < valB) return -1;
     }
