@@ -141,7 +141,7 @@ class DS {
         this.conditionStr = model.condition_str;
 
         let { header, rows: _allRows } = data[this.table];
-        this.rows = getRowSubsetByCondition({ header, rows }, model.condition);
+        this.rows = getRowSubsetByCondition({ header, rows }, model.condition, data);
         if ('Index' === model.type)
             sortIndexRows({ header, rows: this.rows }, model.keys);
 

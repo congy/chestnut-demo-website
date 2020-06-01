@@ -16,14 +16,14 @@ const OP_FNS = {
   'like': (val, pat) => val.includes(pat),
 };
 
-function getRowSubsetByCondition({ header, rows }, cond = null) {
+function getRowSubsetByCondition({ header, rows }, cond = null, allData) {
   if (!rows.every(row => Array.isArray(row)))
     throw Error(`rows must be array of arrays.`);
 
   if (!cond)
     return rows;
 
-  return rows.filter(row => evalExpr(cond, header, row));
+  return rows.filter(row => evalExpr(cond, header, row, null, allData));
 }
 
 // Sorts in-place.
@@ -45,7 +45,10 @@ const REGEX_DATE = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
 // contexts = { qpContext, visContext }
 // If contexts is null, we ignore any parameters and exists constraints.
 // If contexts is not null we evaluate them.
-function evalExpr(e, header, row, contexts = null) {
+function evalExpr(e, header, row, contexts = null, allData = null) {
+  if (!header || !row)
+    throw Error(`Header or row is invalid!\nHeader: ${header && JSON.stringify(header)}\nRow: ${row && JSON.stringify(row)}`);
+
   switch (e.expr) {
     case 'BinOp': {
       const fn = OP_FNS[e.op];
@@ -56,32 +59,34 @@ function evalExpr(e, header, row, contexts = null) {
       if (!contexts && ('Parameter' === e.lh.expr || 'Parameter' === e.rh.expr))
         return true;
 
-      let lh = evalExpr(e.lh, header, row, contexts);
-      let rh = evalExpr(e.rh, header, row, contexts); // No short-circuit handling.
+      let lh = evalExpr(e.lh, header, row, contexts, allData);
+      let rh = evalExpr(e.rh, header, row, contexts, allData); // No short-circuit handling.
 
       // Handle mismatched types.
-      fixtypes:
       if (typeof lh !== typeof rh) {
-        if ('string' === typeof lh && 'number' === typeof rh) {
-          if (Number.isFinite(Number(lh))) {
+        if ('string' === typeof lh) {
+          if ('number' === typeof rh) {
+            if (Number.isFinite(Number(lh)))
+              lh = Number(lh);
+            if (REGEX_DATE.test(lh))
+              lh = new Date(lh).getTime() / 1000;
+          }
+          // Bools are represented as 1 or 0.
+          else if ('boolean' === typeof rh) {
             lh = Number(lh);
-            break fixtypes;
+            rh = Number(rh);
           }
-          if (REGEX_DATE.test(lh)) {
-            lh = new Date(lh).getTime() / 1000;
-            break fixtypes;
-          }
-        }
-        else {
-          console.error(`Unknown BinOp LH/RH types: LH: ${lh}, ${typeof lh}; RH ${rh} ${typeof rh}.`);
         }
       }
+      if (typeof lh !== typeof rh)
+        console.warn(`Unknown BinOp LH/RH types: LH: ${lh} (${typeof lh}); RH ${rh} (${typeof rh}).`);
+
       return fn(lh, rh);
     }
     case 'SetOp': {
       // LH exists in RH (I think).
-      let lh = evalExpr(e.lh, header, row, contexts);
-      let rh = evalExpr(e.rh, header, row, contexts);
+      let lh = evalExpr(e.lh, header, row, contexts, allData);
+      let rh = evalExpr(e.rh, header, row, contexts, allData);
       console.error(lh, rh);
       throw 'TODO: Need to eval RH completely from top.';
     }
@@ -94,24 +99,60 @@ function evalExpr(e, header, row, contexts = null) {
         return row[i];
       }
       // "Normal" case.
-      const lh = evalExpr(e.lh, header, row, contexts);
+      const lh = evalExpr(e.lh, header, row, contexts, allData);
+      if (undefined == lh) {
+        console.error(e, header, row, contexts, allData);
+        throw Error(`AssocOp LHS evaluated to undefined.`);
+      }
       if (!lh.header) {
         console.error('lh', lh);
         throw Error(`AssocOp missing LHS.`);
       }
       ({ header, row } = lh);
-      return evalExpr(e.rh, header, row, contexts);
+      // Check if FK constraint violated.
+      if (undefined === row) {
+        console.warn('FK constraint violated, returning NaN.');
+        return Number.NaN;
+      }
+
+      return evalExpr(e.rh, header, row, contexts, allData);
     }
     case 'AtomValue':
       if ("'" === e.value[0])
         return e.value.slice(1, -1);
+      if ('true' === e.value.toLowerCase())
+        return true;
+      else if ('false' === e.value.toLowerCase())
+        return false;
       const num = Number(e.value);
-      if (!Number.isFinite(num))
-        throw Error(`Failed to parse AtomValue: [${e.value}].`);
-      return num;
+      if (Number.isFinite(num))
+        return num;
+      throw Error(`Failed to parse AtomValue: <<${e.value}>>.`);
     case 'QueryField':
-      const i = header.indexOf(e.field)
-      return row[i];
+      // FK row case.
+      if (e.fkTable) {
+        const fkIndex = header.indexOf(e.fkField);
+        const relTable = allData && allData[e.fkTable];
+        if (!relTable || 0 > fkIndex) {
+          console.error(e, header, row, contexts, allData);
+          throw Error(`QueryField field not found: ${e.field}`);
+        }
+        const fk = row[fkIndex];
+        const { header: relHeader, rows: relRows } = relTable;
+        const idIndex = relHeader.indexOf('id'); // TODO hardcoded?
+        if (0 > idIndex) throw Error('Failed to do QueryField FK join, target missing ID.');
+        const relRow = relRows.find(row => fk === row[idIndex]);
+        const out = { header: relHeader, row: relRow };
+        console.warn('QueryField FK Result:', out);
+        return out;
+      }
+      // Normal case.
+      const i = header.indexOf(e.field);
+      if (0 <= i)
+        return row[i];
+      // Fail.
+      console.error(e, header, row, contexts, allData);
+      throw Error('Unknown QueryField case.');
     case 'Parameter': {
       if (!contexts) throw Error('Attempting to evaluate paramter without contexts.');
       const { qpContext, visContext } = contexts;
