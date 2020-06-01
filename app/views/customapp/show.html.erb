@@ -1,4 +1,11 @@
 <% provide(:title, "Help") %>
+<% content_for :javascript_includes do %>
+  <style>
+    input[type=radio] {
+      width: 20px;
+    }
+  </style>
+<% end %>
 <h1><%= @customapp.name %></h1>
 <p>
 <div style="display:flex;flex-direction:row;">
@@ -103,8 +110,8 @@ function toggle_item_below(elem) {
 			<h5>Query weight: <%= webpage.custom_weight == 0 ? webpage.weight : webpage.custom_weight %></h5>
 			<%= f.fields_for "webpages[]", webpage do |pf| %>
 				<h5>Choose page weight:</h5>
-				<div><%= pf.radio_button :weight, '0', :checked => (webpage.weight == 0), :style=>"width: 20px;" %>0</div>
-				<div><%= pf.radio_button :weight, '1', :checked => (webpage.weight == 1), :style=>"width: 20px;" %>1</div>
+				<div><%= pf.radio_button :weight, '0', :checked => (webpage.weight == 0) %>0</div>
+				<div><%= pf.radio_button :weight, '1', :checked => (webpage.weight == 1) %>1</div>
 				Or manually input a page weight:
       	<%= pf.text_field :custom_weight, size: 10, :value => '' %> <br />
 				<button class="btn btn-info" type="submit">Save</button>
