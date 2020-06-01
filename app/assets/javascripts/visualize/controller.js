@@ -106,7 +106,7 @@ class VisualizerController {
         runtime.innerHTML = '';
         getRuntime(qpInfo.hrName, this.evalSetting)
             .then(d => {
-                if (this.runtimeId !== runtimeId) return;
+                if (!d || this.runtimeId !== runtimeId) return;
 
                 const fmt = ms => {
                     if (ms > 5000) return ((ms / 1000) | 0).toString().slice(0, 3) + 's'
