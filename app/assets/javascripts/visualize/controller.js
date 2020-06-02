@@ -67,7 +67,7 @@ class VisualizerController {
         const tocItems = Object.entries(toc)
             .map(([ tableName, color ]) => new VisRecord(`${tableName} (${tableAbrv[tableName]})`, color));
 
-        const tocDiskRows = Object.values(allTableVis).map((disk, i) => new VisStack([ tocItems[i], disk ], false, 20, 120));
+        const tocDiskRows = Object.values(allTableVis).map((disk, i) => new VisStack([ tocItems[i], disk ], false, 20, 150));
         const tocDiskVis = new VisStack([ new VisElem(createTextEl('Tables (On Disk)')), ...tocDiskRows ], true, 20);
         const tocDiskBox = new VisBox(tocDiskVis, 'rgba(0, 0, 0, 0.05)', 20);
 

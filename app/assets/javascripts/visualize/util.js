@@ -448,3 +448,13 @@ const dsShortNames = {
 function dsVarName(ds) {
   return `${dsShortNames[ds.type]}_${ds.tableType}_${ds.id}`;
 }
+
+/* Randomize array in-place using Durstenfeld shuffle algorithm */
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      var temp = array[i];
+      array[i] = array[j];
+      array[j] = temp;
+  }
+}

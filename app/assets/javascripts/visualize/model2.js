@@ -146,6 +146,8 @@ class DS {
         this.rows = getRowSubsetByCondition({ header, rows }, model.condition, data);
         if ('Index' === model.type)
             sortIndexRows({ header, rows: this.rows }, model.keys, data);
+        else
+            shuffleArray(this.rows);
 
         console.log(`${model.id}: ${this.type}[${this.path}]: ${this.rows.length}/${data[this.table].rows.length} rows.`);
 
